@@ -5,11 +5,15 @@ import { useLocalStorage } from './hooks/useLocalStorage.js';
 import { useNotifications } from './hooks/useNotifications.js';
 import { Cardio } from './pages/Cardio.jsx';
 import { Checkin } from './pages/Checkin.jsx';
+import { CoachAI } from './pages/CoachAI.jsx';
 import { Dashboard } from './pages/Dashboard.jsx';
 import { Evolution } from './pages/Evolution.jsx';
 import { Goals } from './pages/Goals.jsx';
 import { Integrations } from './pages/Integrations.jsx';
+import { NutritionPage } from './pages/NutritionPage.jsx';
 import { Photos } from './pages/Photos.jsx';
+import { WeeklySuggestions } from './pages/WeeklySuggestions.jsx';
+import { WorkoutEditor } from './pages/WorkoutEditor.jsx';
 import { Workouts } from './pages/Workouts.jsx';
 import { todayKey, weekKey } from './utils/date.js';
 
@@ -25,6 +29,10 @@ const storageKeys = [
   'workoutSubstitutions',
   'exerciseDbMappings',
   'selectedWorkoutDay',
+  'customWorkoutPlan',
+  'weeklyProgressionSuggestions',
+  'coachWeeklyReports',
+  'nutritionLogs',
 ];
 
 const defaultNotificationSettings = {
@@ -215,7 +223,17 @@ export default function App() {
         updateReminder={updateReminder}
       />
     ),
+    coach: (
+      <CoachAI
+        checkins={normalizedCheckins}
+        workoutDoneByDate={workoutDoneByDate}
+        cardioDoneByWeek={cardioDoneByWeek}
+      />
+    ),
     treinos: <Workouts workoutDone={workoutDone} toggleExercise={toggleExercise} />,
+    'editor-treino': <WorkoutEditor />,
+    sugestoes: <WeeklySuggestions workoutDone={workoutDone} cardioDone={cardioDone} onEditPlan={() => setActiveTab('editor-treino')} />,
+    nutricao: <NutritionPage latestCheckin={latestCheckin} />,
     cardio: <Cardio cardioDone={cardioDone} toggleCardio={toggleCardio} />,
     checkin: <Checkin onSave={saveCheckin} />,
     evolucao: <Evolution checkins={normalizedCheckins} summary={summary} onDeleteCheckin={deleteCheckin} />,

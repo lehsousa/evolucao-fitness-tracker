@@ -43,7 +43,7 @@ export function ExerciseCard({
       <div className="mt-4 grid grid-cols-3 gap-2">
         <Mini label="Séries" value={planItem.sets} />
         <Mini label="Reps" value={planItem.reps} />
-        <Mini label="Descanso" value={`${exercise.restSeconds}s`} />
+        <Mini label="Descanso" value={`${planItem.restSeconds || exercise.restSeconds}s`} />
       </div>
 
       <div className="mt-3 grid grid-cols-2 gap-2">

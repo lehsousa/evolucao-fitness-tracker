@@ -63,7 +63,7 @@ export function ExerciseDetailModal({
                 <Info label="Dificuldade" value={exercise.difficulty} />
                 <Info label="Padrão" value={exercise.movementPattern} />
                 <Info label="Séries e reps" value={`${planItem.sets} x ${planItem.reps}`} />
-                <Info label="Descanso" value={`${exercise.restSeconds}s`} />
+                <Info label="Descanso" value={`${planItem.restSeconds || exercise.restSeconds}s`} />
               </div>
               {selectedAlternativeName && (
                 <p className="mt-3 rounded-lg border border-amberFit/30 bg-amberFit/10 px-3 py-2 text-sm font-bold text-amberFit">

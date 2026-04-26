@@ -5,8 +5,8 @@ import { ExerciseCard } from '../components/workout/ExerciseCard.jsx';
 import { ExerciseDbAdmin } from '../components/workout/ExerciseDbAdmin.jsx';
 import { ExerciseDetailModal } from '../components/workout/ExerciseDetailModal.jsx';
 import { getExerciseById } from '../data/exercises.js';
-import { workoutPlan } from '../data/workoutPlan.js';
 import { useExerciseHistory } from '../hooks/useExerciseHistory.js';
+import { useWorkoutPlan } from '../hooks/useWorkoutPlan.js';
 
 export function WorkoutsPage({ workoutDone, toggleExercise }) {
   const {
@@ -23,6 +23,7 @@ export function WorkoutsPage({ workoutDone, toggleExercise }) {
     saveExerciseDbMapping,
     removeExerciseDbMapping,
   } = useExerciseHistory();
+  const { plan: workoutPlan } = useWorkoutPlan();
 
   const [selected, setSelected] = useState(null);
   const [initialMode, setInitialMode] = useState('details');

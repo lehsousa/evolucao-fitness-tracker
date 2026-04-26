@@ -50,6 +50,54 @@ Depois de instalado, o app abre como aplicativo, com ícone próprio, tema escur
 
 A tela de treinos tem seleção por dia da semana, cards de exercícios, detalhes técnicos, alternativas e histórico de carga.
 
+## Coach IA
+
+A tela `Coach IA` gera um relatório semanal local com a função `generateWeeklyCoachReport(data)`, sem API externa nesta fase.
+
+O relatório mostra:
+
+- peso inicial e atual
+- evolução de cintura
+- treinos concluídos
+- cardios concluídos
+- média de passos
+- média de sono
+- leitura simples de evolução de carga
+- alertas positivos
+- pontos de atenção
+- sugestões para a próxima semana
+- sugestões de treino, cardio e lembretes de nutrição
+
+A função retorna este modelo:
+
+- `summary`
+- `positives`
+- `attentionPoints`
+- `nextWeekActions`
+- `trainingSuggestions`
+- `cardioSuggestions`
+- `nutritionReminders`
+
+As recomendações são motivadoras e conservadoras: não fazem diagnóstico médico, não recomendam medicamentos, não sugerem suplementos arriscados e não alteram treino automaticamente. O botão `Salvar relatório` guarda um retrato da semana em `coachWeeklyReports`.
+
+## Plano Alimentar
+
+A tela `Alimentar` organiza o plano inicial de alimentação para redução de gordura com preservação muscular.
+
+Recursos da versão atual:
+
+- metas de proteína, água, calorias e peso atual
+- cards por horário de refeição
+- opções de pratos com alimentos, tags e proteína estimada
+- status por refeição: pendente, feito, pulei, fora do plano e trocado
+- modal para trocar a opção da refeição
+- checklist diário com proteína, aderência, refeições feitas e refeições fora do plano
+- contador de água com botões rápidos de 250 ml, 500 ml e 1 L
+- histórico alimentar dos últimos 7 dias
+- lista de compras base
+
+Os dados ficam salvos em `nutritionLogs`. O plano é informativo e não substitui orientação profissional individualizada.
+
 Como registrar carga:
 
 1. Abra `Treinos`.
@@ -69,6 +117,30 @@ Como usar alternativas:
 1. Toque em `Ocupado?` no card ou em `Aparelho ocupado? Ver substituições` no detalhe.
 2. Escolha uma alternativa equivalente.
 3. A substituição fica marcada apenas para o treino do dia atual.
+
+### Editor de Treino
+
+A tela `Editor` permite ajustar o plano sem mexer no código:
+
+1. Toque em `Novo dia` para criar um treino.
+2. Edite dia, nome, foco e observações.
+3. Use `Adicionar` para escolher exercícios da biblioteca.
+4. Ajuste séries, repetições, descanso e observações.
+5. Use as setas para alterar a ordem.
+6. Toque em `Salvar tudo`.
+
+Quando existe um plano salvo no navegador, ele substitui o plano padrão. O botão `Restaurar plano padrão` remove a personalização e volta para a divisão original.
+
+### Sugestões da Semana
+
+A tela `Sugestões` usa regras locais simples, sem IA externa e sem aplicar nada automaticamente.
+
+- RPE até 7 com repetições dentro da meta: sugere subir 2% a 5%.
+- RPE 9 ou maior: sugere manter ou reduzir um pouco.
+- Sem histórico: sugere começar leve e priorizar técnica.
+- Três sessões sem evolução clara: sugere revisar técnica, descanso ou alternativa.
+
+Cada sugestão mostra `Aplicar sugestão`, `Ignorar` e `Editar manualmente`. Esses botões registram sua decisão no `localStorage`; o app não muda cargas ou treinos sozinho.
 
 Como adicionar animações futuramente:
 
@@ -91,6 +163,10 @@ Chaves usadas no `localStorage`:
 - `workoutSubstitutions`: substituições escolhidas para o dia atual
 - `exerciseDbMappings`: mapeamento entre exercício local e ExerciseDB
 - `selectedWorkoutDay`: último dia de treino selecionado
+- `customWorkoutPlan`: plano editável salvo pelo usuário
+- `weeklyProgressionSuggestions`: sugestões e decisões registradas por data
+- `coachWeeklyReports`: relatórios semanais salvos pelo Coach IA
+- `nutritionLogs`: refeições, água e aderência alimentar por data
 - `efl:workouts`: exercícios concluídos
 
 ### ExerciseDB Opcional
