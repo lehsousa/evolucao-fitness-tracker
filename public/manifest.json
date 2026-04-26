@@ -13,8 +13,8 @@
   "lang": "pt-BR",
   "icons": [
     {
-      "src": "/icons/icon-192.png",
       "sizes": "192x192",
+      "src": "/icons/icon-192.png",
       "type": "image/png",
       "purpose": "any maskable"
     },

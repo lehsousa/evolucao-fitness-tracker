@@ -1,6 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96">
-  <rect width="96" height="96" rx="18" fill="#020617"/>
-  <path d="M25 58h46" stroke="#4ade80" stroke-width="9" stroke-linecap="round"/>
-  <path d="M35 34h26" stroke="#22d3ee" stroke-width="9" stroke-linecap="round"/>
-  <path d="M32 46h32" stroke="#fbbf24" stroke-width="9" stroke-linecap="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Evolução Fitness">
+  <rect width="512" height="512" rx="112" fill="#020617"/>
+  <rect x="112" y="112" width="288" height="288" rx="72" fill="#0f172a"/>
+  <path fill="#34f18a" d="M160 162h168v42H160zm0 146h168v42H160zm0-73h134v42H160z"/>
+  <path fill="#34f18a" d="M160 162h42v188h-42z"/>
+  <path d="M176 348l84-78 58 34 74-128" fill="none" stroke="#22d3ee" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M392 176v82m0-82h-78" fill="none" stroke="#22d3ee" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

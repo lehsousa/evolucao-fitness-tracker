@@ -209,6 +209,33 @@ VITE_GEMINI_API_KEY=sua_chave_aqui
 
 Este projeto está integrado ao **Capacitor**, permitindo empacotar o site React (Vite) dentro de um aplicativo Android real, sem precisar alterar a base de código do Front-end ou corromper seu banco de dados local.
 
+### Identidade Visual Android
+
+O nome nativo exibido no celular está configurado como `Evolução Fitness` em:
+
+- `capacitor.config.json`
+- `android/app/src/main/res/values/strings.xml`
+
+Os assets temporários do app ficam em `resources/`:
+
+- `resources/icon.png`
+- `resources/icon-foreground.png`
+- `resources/splash.png`
+
+Para regenerar ícones e splash com o `@capacitor/assets`, rode:
+
+```bash
+npm run cap:assets
+```
+
+Depois sincronize o Android:
+
+```bash
+npx cap sync android
+```
+
+O splash screen usa fundo escuro `#020617` e o ícone central do app. Se trocar a identidade visual no futuro, substitua os arquivos em `resources/` e rode os comandos acima.
+
 ### Como Gerar e Sincronizar o App
 
 Sempre que você alterar o código (React/Tailwind) e quiser ver as mudanças no aplicativo Android, rode:

@@ -68,13 +68,14 @@ export function CoachAI({ checkins, workoutDoneByDate, cardioDoneByWeek }) {
       
     } catch (err) {
       console.error(err);
-      setAiError('IA gratuita indisponível. Mantive a análise local.');
+      setAiError(err?.message || 'IA gratuita indisponível. Mantive a análise local.');
     } finally {
       setIsGeneratingAI(false);
     }
   }
 
   const configured = isGeminiConfigured();
+  const currentReportLooksIncomplete = currentAiReport?.report ? looksIncomplete(currentAiReport.report) : false;
 
   return (
     <div className="space-y-4">
@@ -109,7 +110,7 @@ export function CoachAI({ checkins, workoutDoneByDate, cardioDoneByWeek }) {
                 className="flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-purple-500 px-4 font-black text-white transition hover:bg-purple-400 disabled:opacity-50 lg:w-auto"
               >
                 {isGeneratingAI ? <Loader2 size={18} className="animate-spin" /> : <Bot size={18} />}
-                Gerar análise com IA gratuita
+                {currentAiReport ? 'Gerar novamente' : 'Gerar análise com IA gratuita'}
               </button>
               
               <button 
@@ -142,9 +143,12 @@ export function CoachAI({ checkins, workoutDoneByDate, cardioDoneByWeek }) {
             <Bot className="text-purple-400" size={24} />
             <h2 className="text-xl font-black text-white">Análise do Coach (Gemini)</h2>
           </div>
-          <div className="text-slate-300 text-sm whitespace-pre-wrap leading-relaxed">
-            {currentAiReport.report}
-          </div>
+          {currentReportLooksIncomplete && (
+            <div className="mb-4 rounded-lg border border-amberFit/30 bg-amberFit/10 px-3 py-3 text-sm font-semibold text-amberFit">
+              Esta análise salva parece ter vindo incompleta. Toque em Gerar novamente para substituir por uma resposta completa.
+            </div>
+          )}
+          <CoachReportText text={currentAiReport.report} />
         </section>
       )}
 
@@ -222,6 +226,39 @@ function ListCard({ title, icon: Icon, tone, items }) {
       </div>
     </section>
   );
+}
+
+function CoachReportText({ text }) {
+  const blocks = String(text || '')
+    .split(/\n{2,}/)
+    .map((block) => block.trim())
+    .filter(Boolean);
+
+  return (
+    <div className="space-y-3 text-slate-300">
+      {blocks.map((block, index) => {
+        const clean = block.replace(/\*\*/g, '');
+        const isHeading = clean.length < 80 && /^(Resumo|Pontos|3 a|Acoes|Ações)/i.test(clean);
+
+        return isHeading ? (
+          <h3 key={`${clean}-${index}`} className="pt-2 text-base font-black text-white">
+            {clean}
+          </h3>
+        ) : (
+          <p key={`${clean}-${index}`} className="whitespace-pre-wrap break-words text-sm font-medium leading-7 text-slate-300">
+            {clean}
+          </p>
+        );
+      })}
+    </div>
+  );
+}
+
+function looksIncomplete(text) {
+  const clean = String(text || '').trim();
+  if (!clean) return false;
+  if (clean.length < 120) return true;
+  return !/[.!?)]$/.test(clean);
 }
 
 function formatKg(value) {

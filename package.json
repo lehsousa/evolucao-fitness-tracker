@@ -7,6 +7,7 @@
     "dev": "vite --host 0.0.0.0",
     "build": "vite build",
     "preview": "vite preview --host 0.0.0.0",
+    "cap:assets": "capacitor-assets generate",
     "cap:sync": "npm run build && npx cap sync android",
     "cap:open": "npx cap open android",
     "cap:run:android": "npm run build && npx cap run android"
@@ -25,5 +26,8 @@
     "recharts": "^2.15.4",
     "tailwindcss": "^3.4.17",
     "vite": "^7.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^3.0.5"
   }
 }

@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Evolução Fitness Leandro</string>
-    <string name="title_activity_main">Evolução Fitness Leandro</string>
+    <string name="app_name">Evolução Fitness</string>
+    <string name="title_activity_main">Evolução Fitness</string>
     <string name="package_name">br.com.leandro.evolucaofitness</string>
     <string name="custom_url_scheme">br.com.leandro.evolucaofitness</string>
 </resources>
