@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Database, Link2, Loader2, Search, Trash2, Eye } from 'lucide-react';
 import { exerciseLibrary } from '../../data/exercises.js';
-import { isExerciseDbConfigured, searchExercisesByName } from '../../services/exerciseDbApi.js';
+import { isExerciseDbConfigured, searchExercisesByName, buildExerciseGifUrl } from '../../services/exerciseDbApi.js';
 import { getExerciseSearchTerms, normalizeSearchText } from '../../data/exerciseSearchTerms.js';
 
 export function ExerciseDbAdmin({ mappings, onSaveMapping, onRemoveMapping, onOpenDetail }) {
@@ -246,7 +246,9 @@ VITE_EXERCISEDB_API_HOST=exercisedb.p.rapidapi.com
               const localExercise = exerciseLibrary.find((exercise) => exercise.id === localId);
               return (
                 <div key={localId} className="flex gap-3 rounded-lg bg-ink px-3 py-3 items-start border border-line/50">
-                  {mapping.gifUrl ? (
+                  {mapping.externalId ? (
+                    <img src={buildExerciseGifUrl(mapping.externalId)} alt={mapping.name} className="h-16 w-16 shrink-0 rounded-lg object-cover bg-black" />
+                  ) : mapping.gifUrl ? (
                     <img src={mapping.gifUrl} alt={mapping.name} className="h-16 w-16 shrink-0 rounded-lg object-cover bg-black" />
                   ) : (
                     <div className="grid h-16 w-16 shrink-0 place-items-center rounded-lg bg-panelSoft text-slate-500">

@@ -78,7 +78,6 @@ export function useExerciseHistory() {
         provider: 'ExerciseDB',
         externalId: externalExercise.externalId,
         name: externalExercise.name,
-        gifUrl: externalExercise.gifUrl || '',
         bodyPart: externalExercise.bodyPart || '',
         target: externalExercise.target || '',
         equipment: externalExercise.equipment || '',

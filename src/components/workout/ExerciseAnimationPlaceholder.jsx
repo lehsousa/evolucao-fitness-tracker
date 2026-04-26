@@ -1,53 +1,22 @@
-import { useEffect, useState } from 'react';
-import { Activity, Loader2, Play } from 'lucide-react';
-import { getExerciseGif } from '../../services/exerciseDbApi.js';
+import { useMemo, useState } from 'react';
+import { Activity, Play } from 'lucide-react';
+import { buildExerciseGifUrl } from '../../services/exerciseDbApi.js';
 
 export function ExerciseAnimationPlaceholder({ exercise, exerciseDbMapping }) {
-  const [gifUrl, setGifUrl] = useState(exercise.animationUrl || exerciseDbMapping?.gifUrl || '');
-  const [loading, setLoading] = useState(false);
-  const [failed, setFailed] = useState(false);
+  const [imgError, setImgError] = useState(false);
 
-  useEffect(() => {
-    let active = true;
-    setFailed(false);
-
-    if (exercise.animationUrl) {
-      setGifUrl(exercise.animationUrl);
-      return undefined;
+  const gifUrl = useMemo(() => {
+    if (exercise.animationUrl) return exercise.animationUrl;
+    if (exerciseDbMapping?.externalId) {
+      return buildExerciseGifUrl(exerciseDbMapping.externalId);
     }
+    // Suporte legado
+    if (exerciseDbMapping?.gifUrl) return exerciseDbMapping.gifUrl;
+    
+    return '';
+  }, [exercise.animationUrl, exerciseDbMapping?.externalId, exerciseDbMapping?.gifUrl]);
 
-    if (!exerciseDbMapping?.externalId) {
-      setGifUrl('');
-      return undefined;
-    }
-
-    if (exerciseDbMapping.gifUrl) {
-      setGifUrl(exerciseDbMapping.gifUrl);
-      return undefined;
-    }
-
-    setLoading(true);
-    getExerciseGif(exerciseDbMapping.externalId)
-      .then((url) => {
-        if (!active) return;
-        setGifUrl(url || '');
-        setFailed(!url);
-      })
-      .catch(() => {
-        if (!active) return;
-        setGifUrl('');
-        setFailed(true);
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [exercise.animationUrl, exerciseDbMapping?.gifUrl, exerciseDbMapping?.externalId]);
-
-  if (gifUrl) {
+  if (gifUrl && !imgError) {
     return (
       <section className="card overflow-hidden bg-ink shadow-none">
         <div className="flex items-center justify-between border-b border-line px-4 py-3">
@@ -57,7 +26,12 @@ export function ExerciseAnimationPlaceholder({ exercise, exerciseDbMapping }) {
           </div>
           <span className="rounded-lg bg-cyanFit/10 px-2 py-1 text-xs font-bold text-cyanFit">Fonte: ExerciseDB</span>
         </div>
-        <img src={gifUrl} alt={`Execução técnica: ${exercise.name}`} className="aspect-video w-full bg-black object-contain" />
+        <img 
+          src={gifUrl} 
+          alt={`Execução técnica: ${exercise.name}`} 
+          className="aspect-video w-full bg-black object-contain"
+          onError={() => setImgError(true)} 
+        />
       </section>
     );
   }
@@ -74,14 +48,14 @@ export function ExerciseAnimationPlaceholder({ exercise, exerciseDbMapping }) {
       <div className="grid aspect-video place-items-center bg-[radial-gradient(circle_at_center,rgba(34,211,238,0.18),transparent_38%),linear-gradient(135deg,#101418,#202831)] px-4 text-center">
         <div>
           <div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full border border-mint/40 bg-mint/10 text-mint">
-            {loading ? <Loader2 className="animate-spin" size={30} /> : <Activity size={30} />}
+            <Activity size={30} />
           </div>
           <p className="font-black text-white">{exercise.name}</p>
           <p className="mt-1 text-sm font-semibold text-slate-400">{exercise.muscleGroup}</p>
           <p className="mt-3 text-sm text-slate-500">
-            {loading ? 'Buscando animação na ExerciseDB...' : 'Animação da execução será adicionada aqui.'}
+            Animação da execução será adicionada aqui.
           </p>
-          {failed && <p className="mt-2 text-xs font-bold text-amberFit">Não foi possível carregar a ExerciseDB. Placeholder mantido.</p>}
+          {imgError && <p className="mt-2 text-xs font-bold text-amberFit">Não foi possível carregar a imagem. Placeholder mantido.</p>}
         </div>
       </div>
     </section>

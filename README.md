@@ -192,7 +192,53 @@ Depois de salvar o `.env`, reinicie o servidor:
 npm run dev
 ```
 
-Na tela `Treinos`, role até a seção `Mapeamento ExerciseDB`. Busque os exercícios em inglês (ex: *bench press*) e mapeie com o seu exercício local. A mídia importada aparecerá sempre no detalhe do seu treino! Se a API falhar ou você remover a chave, o app não irá quebrar e manterá o placeholder técnico graciosamente.
+## Integração com Gemini API (Coach IA Gratuita)
+
+O projeto também possui uma integração opcional e sob demanda com a IA do Google (Gemini 1.5 Flash) na tela do **Coach**. Em vez de usar um motor de regras estáticas locais, a IA recebe um mini-resumo compactado numérico da sua semana (nunca seus dados completos para poupar tokens e preservar privacidade) e devolve 3 ações conservadoras para sua próxima semana de treinos.
+
+Para ativar essa funcionalidade:
+1. Acesse o [Google AI Studio](https://aistudio.google.com/).
+2. Crie um projeto e gere uma **API Key** (gratuita).
+3. No arquivo `.env` raiz do seu projeto local, adicione:
+```env
+VITE_GEMINI_API_KEY=sua_chave_aqui
+```
+4. Ao abrir o App na aba Coach, o botão mágico roxo de IA será habilitado. Se ocorrer alguma falha de rede ou falta de chave, o app possui mecanismo inteligente de _fallback_ e sempre renderizará a análise local como segurança.
+
+## Transformação para Aplicativo Android (Capacitor)
+
+Este projeto está integrado ao **Capacitor**, permitindo empacotar o site React (Vite) dentro de um aplicativo Android real, sem precisar alterar a base de código do Front-end ou corromper seu banco de dados local.
+
+### Como Gerar e Sincronizar o App
+
+Sempre que você alterar o código (React/Tailwind) e quiser ver as mudanças no aplicativo Android, rode:
+
+```bash
+npm run cap:sync
+```
+*Esse comando fará o build (`npm run build`) automaticamente e copiará os arquivos minificados para a pasta `android/`.*
+
+### Como Abrir no Android Studio
+
+Para compilar o aplicativo para o seu celular ou gerar o APK, abra o projeto Android Studio rodando:
+
+```bash
+npm run cap:open
+```
+
+No Android Studio, você poderá:
+1. Conectar seu celular Android via cabo USB (com Modo Desenvolvedor e Depuração USB ativos).
+2. Selecionar o seu celular no topo.
+3. Clicar no botão **Play** (Run 'app') para instalar direto nele.
+4. Ou ir em **Build > Build Bundle / APK > Build APK(s)** para gerar o arquivo `.apk` final.
+
+### Como Executar Direto no Dispositivo (CLI)
+
+Se seu celular já estiver conectado no PC e configurado para Depuração USB, você pode rodar o app no celular sem abrir o Android Studio executando:
+
+```bash
+npm run cap:run:android
+```
 
 ## PWA
 

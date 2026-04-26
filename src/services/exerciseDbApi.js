@@ -14,26 +14,20 @@ export async function searchExercisesByName(name) {
   return normalizeExerciseList(data);
 }
 
-export async function getExerciseGif(exerciseId) {
-  if (!exerciseId) return '';
-
-  const data = await requestExerciseDb(`/exercises/exercise/${encodeURIComponent(exerciseId)}`);
-  const exercise = Array.isArray(data) ? data[0] : data;
-  return getExerciseGifUrl(exercise);
-}
-
-export function getExerciseGifUrl(apiExercise) {
-  return apiExercise?.gifUrl || apiExercise?.gifURL || apiExercise?.gif || '';
+export function buildExerciseGifUrl(exerciseId, resolution = '180') {
+  if (!exerciseId || !API_KEY) return '';
+  return `https://${API_HOST}/image?exerciseId=${exerciseId}&resolution=${resolution}&rapidapi-key=${API_KEY}`;
 }
 
 export function normalizeExerciseDbExercise(apiExercise) {
+  const externalId = apiExercise.id || apiExercise.exerciseId || apiExercise._id;
   return {
-    externalId: apiExercise.id || apiExercise.exerciseId || apiExercise._id,
+    externalId,
     name: apiExercise.name,
     bodyPart: apiExercise.bodyPart,
     target: apiExercise.target,
     equipment: apiExercise.equipment,
-    gifUrl: getExerciseGifUrl(apiExercise),
+    gifUrl: buildExerciseGifUrl(externalId),
     secondaryMuscles: apiExercise.secondaryMuscles || [],
     instructions: apiExercise.instructions || [],
     provider: 'ExerciseDB',
