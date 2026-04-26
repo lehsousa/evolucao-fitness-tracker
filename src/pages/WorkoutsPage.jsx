@@ -127,6 +127,7 @@ export function WorkoutsPage({ workoutDone, toggleExercise }) {
         mappings={exerciseDbMappings}
         onSaveMapping={saveExerciseDbMapping}
         onRemoveMapping={removeExerciseDbMapping}
+        onOpenDetail={(localId) => openExercise({ exerciseId: localId, type: 'strength', sets: 0, reps: '' })}
       />
 
       <AnimatePresence>

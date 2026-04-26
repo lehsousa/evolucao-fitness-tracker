@@ -16,7 +16,7 @@ export function ExerciseAnimationPlaceholder({ exercise, exerciseDbMapping }) {
       return undefined;
     }
 
-    if (!exerciseDbMapping?.id) {
+    if (!exerciseDbMapping?.externalId) {
       setGifUrl('');
       return undefined;
     }
@@ -27,7 +27,7 @@ export function ExerciseAnimationPlaceholder({ exercise, exerciseDbMapping }) {
     }
 
     setLoading(true);
-    getExerciseGif(exerciseDbMapping.id)
+    getExerciseGif(exerciseDbMapping.externalId)
       .then((url) => {
         if (!active) return;
         setGifUrl(url || '');
@@ -45,7 +45,7 @@ export function ExerciseAnimationPlaceholder({ exercise, exerciseDbMapping }) {
     return () => {
       active = false;
     };
-  }, [exercise.animationUrl, exerciseDbMapping?.gifUrl, exerciseDbMapping?.id]);
+  }, [exercise.animationUrl, exerciseDbMapping?.gifUrl, exerciseDbMapping?.externalId]);
 
   if (gifUrl) {
     return (

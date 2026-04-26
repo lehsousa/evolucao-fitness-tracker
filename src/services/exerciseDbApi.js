@@ -1,8 +1,8 @@
 const API_KEY = import.meta.env.VITE_EXERCISEDB_API_KEY;
 const API_HOST = import.meta.env.VITE_EXERCISEDB_API_HOST || 'exercisedb.p.rapidapi.com';
-const API_BASE_URL = import.meta.env.VITE_EXERCISEDB_API_BASE_URL || `https://${API_HOST}`;
+const API_BASE_URL = 'https://exercisedb.p.rapidapi.com';
 
-export function hasExerciseDbConfig() {
+export function isExerciseDbConfigured() {
   return Boolean(API_KEY);
 }
 
@@ -19,7 +19,25 @@ export async function getExerciseGif(exerciseId) {
 
   const data = await requestExerciseDb(`/exercises/exercise/${encodeURIComponent(exerciseId)}`);
   const exercise = Array.isArray(data) ? data[0] : data;
-  return exercise?.gifUrl || exercise?.gifURL || exercise?.gif || '';
+  return getExerciseGifUrl(exercise);
+}
+
+export function getExerciseGifUrl(apiExercise) {
+  return apiExercise?.gifUrl || apiExercise?.gifURL || apiExercise?.gif || '';
+}
+
+export function normalizeExerciseDbExercise(apiExercise) {
+  return {
+    externalId: apiExercise.id || apiExercise.exerciseId || apiExercise._id,
+    name: apiExercise.name,
+    bodyPart: apiExercise.bodyPart,
+    target: apiExercise.target,
+    equipment: apiExercise.equipment,
+    gifUrl: getExerciseGifUrl(apiExercise),
+    secondaryMuscles: apiExercise.secondaryMuscles || [],
+    instructions: apiExercise.instructions || [],
+    provider: 'ExerciseDB',
+  };
 }
 
 async function requestExerciseDb(path) {
@@ -44,12 +62,5 @@ async function requestExerciseDb(path) {
 function normalizeExerciseList(data) {
   const list = Array.isArray(data) ? data : data?.data || data?.results || [];
 
-  return list.map((exercise) => ({
-    id: exercise.id || exercise.exerciseId || exercise._id,
-    name: exercise.name,
-    equipment: exercise.equipment,
-    bodyPart: exercise.bodyPart,
-    target: exercise.target,
-    gifUrl: exercise.gifUrl || exercise.gifURL || exercise.gif || '',
-  })).filter((exercise) => exercise.id && exercise.name);
+  return list.map(normalizeExerciseDbExercise).filter((exercise) => exercise.externalId && exercise.name);
 }

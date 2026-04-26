@@ -75,12 +75,14 @@ export function useExerciseHistory() {
     setExerciseDbMappings((current) => ({
       ...(isPlainObject(current) ? current : {}),
       [localExerciseId]: {
-        id: externalExercise.id,
+        provider: 'ExerciseDB',
+        externalId: externalExercise.externalId,
         name: externalExercise.name,
         gifUrl: externalExercise.gifUrl || '',
-        equipment: externalExercise.equipment || '',
         bodyPart: externalExercise.bodyPart || '',
         target: externalExercise.target || '',
+        equipment: externalExercise.equipment || '',
+        mappedAt: new Date().toISOString().split('T')[0],
       },
     }));
   }

@@ -1,36 +1,53 @@
-import { Bluetooth, ExternalLink, Link2, Scale, ShieldCheck, Smartphone } from 'lucide-react';
+import { useState } from 'react';
+import { Bluetooth, ExternalLink, Link2, Scale, ShieldCheck, Smartphone, Wand2 } from 'lucide-react';
+import { IntegrationInstructionModal } from '../components/integrations/IntegrationInstructionModal';
+import { AssistedImportModal } from '../components/integrations/AssistedImportModal';
 
-const integrations = [
-  {
-    title: 'Samsung Health / Galaxy Fit3',
-    status: 'Não conectado',
-    tone: 'coral',
-    icon: Smartphone,
-    data: ['passos', 'treinos', 'sono', 'frequência cardíaca', 'calorias estimadas'],
-    button: 'Configurar integração',
-    description: 'Preparado para receber dados de pulseira e Samsung Health quando a integração estiver disponível.',
-  },
-  {
-    title: 'Balança Fitdays / Multilaser HC059N',
-    status: 'Não conectado',
-    tone: 'coral',
-    icon: Scale,
-    data: ['peso', 'IMC', 'gordura corporal', 'massa muscular', 'água corporal', 'gordura visceral', 'metabolismo basal'],
-    button: 'Configurar integração',
-    description: 'Modelo de dados pronto para medidas de bioimpedância importadas no futuro.',
-  },
-  {
-    title: 'Health Connect',
-    status: 'Recomendado',
-    tone: 'mint',
-    icon: Link2,
-    data: ['ponte entre Samsung Health', 'Fitdays', 'Evolução Fitness Leandro'],
-    button: 'Ver instruções',
-    description: 'Será a ponte entre Samsung Health, Fitdays e nosso app para centralizar dados de saúde no Android.',
-  },
-];
+export function Integrations({ onNavigate }) {
+  const [openModal, setOpenModal] = useState(null);
 
-export function Integrations() {
+  const modalsData = {
+    samsung: {
+      title: 'Samsung Health / Galaxy Fit3',
+      status: 'Integração real ainda não ativa',
+      explanation: 'O Samsung Health poderá ser integrado futuramente via Health Connect em um app Android.',
+      dataList: ['Passos', 'Treinos', 'Sono', 'Frequência cardíaca', 'Calorias estimadas'],
+      instructions: [
+        'Abra o aplicativo Samsung Health no seu celular.',
+        'Confirme que a Galaxy Fit3 está sincronizando os dados.',
+        'Verifique se os dados de passos, sono e frequência cardíaca aparecem.',
+        'No futuro, você permitirá que o Health Connect compartilhe esses dados com o app Evolução Fitness.'
+      ],
+      primaryButton: 'Entendi'
+    },
+    fitdays: {
+      title: 'Balança Fitdays',
+      status: 'Integração real ainda não ativa',
+      explanation: 'A balança envia dados para o app Fitdays; depois esses dados poderão chegar ao nosso app via Health Connect.',
+      dataList: ['Peso', 'IMC', 'Gordura corporal', 'Massa muscular', 'Água corporal', 'Gordura visceral', 'Metabolismo basal'],
+      instructions: [
+        'Abra o aplicativo Fitdays.',
+        'Sincronize a balança subindo descalço.',
+        'Verifique se o peso e bioimpedância aparecem no Fitdays.',
+        'Ative a sincronização com Samsung Health, Google Fit ou Health Connect, se disponível.',
+        'Futuramente será importado no app Evolução Fitness de forma automática.'
+      ],
+      primaryButton: 'Entendi',
+      secondaryButton: 'Preencher manualmente no Check-in',
+      onSecondaryClick: () => onNavigate && onNavigate('checkin')
+    },
+    healthconnect: {
+      title: 'Health Connect',
+      status: 'Preparado, sem integração nativa',
+      explanation: 'O Health Connect será a ponte oficial entre Samsung Health, Fitdays e o app Evolução Fitness. Essa integração nativa exigirá um app Android.',
+      instructions: [
+        'Galaxy Fit3 → Samsung Health → Health Connect → Evolução Fitness',
+        'Balança → Fitdays → Health Connect → Evolução Fitness'
+      ],
+      primaryButton: 'Entendi'
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div>
@@ -41,10 +58,84 @@ export function Integrations() {
         </p>
       </div>
 
+      {/* Importação Assistida Card */}
+      <section className="card p-4 sm:p-5 border border-mint/20">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-mint/15 text-mint">
+              <Wand2 size={22} />
+            </div>
+            <div>
+              <h2 className="text-xl font-black text-white">Importação assistida para Check-in</h2>
+              <p className="mt-1 text-sm text-slate-400">
+                Preencha os dados dos seus apps de saúde manualmente em uma única tela e envie direto para o check-in do dia.
+              </p>
+            </div>
+          </div>
+          <button 
+            onClick={() => setOpenModal('assisted')}
+            className="flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg bg-mint px-5 font-black text-ink transition hover:bg-mint/90 w-full sm:w-auto"
+          >
+            <Wand2 size={18} />
+            Iniciar importação
+          </button>
+        </div>
+      </section>
+
       <section className="grid gap-4 lg:grid-cols-3">
-        {integrations.map((integration) => (
-          <IntegrationCard key={integration.title} integration={integration} />
-        ))}
+        {/* Samsung Health */}
+        <article className="card flex flex-col p-4 sm:p-5">
+          <div className="flex items-start justify-between gap-3">
+            <div className="grid h-12 w-12 place-items-center rounded-lg bg-panelSoft text-cyanFit">
+              <Smartphone size={24} />
+            </div>
+            <span className="rounded-lg border px-3 py-1 text-xs font-black uppercase tracking-wide border-coral/30 bg-coral/10 text-coral">Não conectado</span>
+          </div>
+          <h2 className="mt-4 text-xl font-black text-white">Samsung Health / Galaxy Fit3</h2>
+          <p className="mt-2 text-sm text-slate-400">Preparado para receber dados de pulseira e Samsung Health quando a integração estiver disponível.</p>
+          <button 
+            onClick={() => setOpenModal('samsung')}
+            className="mt-5 flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-line bg-ink px-4 font-black text-white transition hover:border-cyanFit hover:text-cyanFit"
+          >
+            <Bluetooth size={18} /> Configurar integração
+          </button>
+        </article>
+
+        {/* Fitdays */}
+        <article className="card flex flex-col p-4 sm:p-5">
+          <div className="flex items-start justify-between gap-3">
+            <div className="grid h-12 w-12 place-items-center rounded-lg bg-panelSoft text-cyanFit">
+              <Scale size={24} />
+            </div>
+            <span className="rounded-lg border px-3 py-1 text-xs font-black uppercase tracking-wide border-coral/30 bg-coral/10 text-coral">Não conectado</span>
+          </div>
+          <h2 className="mt-4 text-xl font-black text-white">Balança Fitdays / Multilaser</h2>
+          <p className="mt-2 text-sm text-slate-400">Modelo de dados pronto para medidas de bioimpedância importadas no futuro.</p>
+          <button 
+            onClick={() => setOpenModal('fitdays')}
+            className="mt-5 flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-line bg-ink px-4 font-black text-white transition hover:border-cyanFit hover:text-cyanFit"
+          >
+            <Bluetooth size={18} /> Configurar integração
+          </button>
+        </article>
+
+        {/* Health Connect */}
+        <article className="card flex flex-col p-4 sm:p-5">
+          <div className="flex items-start justify-between gap-3">
+            <div className="grid h-12 w-12 place-items-center rounded-lg bg-panelSoft text-cyanFit">
+              <Link2 size={24} />
+            </div>
+            <span className="rounded-lg border px-3 py-1 text-xs font-black uppercase tracking-wide border-mint/30 bg-mint/10 text-mint">Recomendado</span>
+          </div>
+          <h2 className="mt-4 text-xl font-black text-white">Health Connect</h2>
+          <p className="mt-2 text-sm text-slate-400">Será a ponte entre Samsung Health, Fitdays e nosso app para centralizar dados.</p>
+          <button 
+            onClick={() => setOpenModal('healthconnect')}
+            className="mt-5 flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-line bg-ink px-4 font-black text-white transition hover:border-cyanFit hover:text-cyanFit"
+          >
+            <ExternalLink size={18} /> Ver instruções
+          </button>
+        </article>
       </section>
 
       <section className="card p-4 sm:p-5">
@@ -60,41 +151,31 @@ export function Integrations() {
           </div>
         </div>
       </section>
+
+      <IntegrationInstructionModal 
+        isOpen={openModal === 'samsung'} 
+        onClose={() => setOpenModal(null)} 
+        {...modalsData.samsung} 
+      />
+      <IntegrationInstructionModal 
+        isOpen={openModal === 'fitdays'} 
+        onClose={() => setOpenModal(null)} 
+        {...modalsData.fitdays} 
+      />
+      <IntegrationInstructionModal 
+        isOpen={openModal === 'healthconnect'} 
+        onClose={() => setOpenModal(null)} 
+        {...modalsData.healthconnect} 
+      />
+      
+      <AssistedImportModal 
+        isOpen={openModal === 'assisted'} 
+        onClose={() => setOpenModal(null)} 
+        onSuccess={() => {
+          setOpenModal(null);
+          if (onNavigate) onNavigate('checkin');
+        }} 
+      />
     </div>
-  );
-}
-
-function IntegrationCard({ integration }) {
-  const Icon = integration.icon;
-  const statusTone = integration.tone === 'mint' ? 'border-mint/30 bg-mint/10 text-mint' : 'border-coral/30 bg-coral/10 text-coral';
-
-  return (
-    <article className="card flex flex-col p-4 sm:p-5">
-      <div className="flex items-start justify-between gap-3">
-        <div className="grid h-12 w-12 place-items-center rounded-lg bg-panelSoft text-cyanFit">
-          <Icon size={24} />
-        </div>
-        <span className={`rounded-lg border px-3 py-1 text-xs font-black uppercase tracking-wide ${statusTone}`}>{integration.status}</span>
-      </div>
-
-      <h2 className="mt-4 text-xl font-black text-white">{integration.title}</h2>
-      <p className="mt-2 text-sm text-slate-400">{integration.description}</p>
-
-      <div className="mt-4">
-        <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Dados previstos</p>
-        <div className="mt-2 flex flex-wrap gap-2">
-          {integration.data.map((item) => (
-            <span key={item} className="rounded-lg bg-ink px-2.5 py-1.5 text-xs font-bold text-slate-300">
-              {item}
-            </span>
-          ))}
-        </div>
-      </div>
-
-      <button type="button" className="mt-5 flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-line bg-ink px-4 font-black text-white transition hover:border-cyanFit hover:text-cyanFit">
-        {integration.title === 'Health Connect' ? <ExternalLink size={18} /> : <Bluetooth size={18} />}
-        {integration.button}
-      </button>
-    </article>
   );
 }

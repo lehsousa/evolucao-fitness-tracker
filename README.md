@@ -169,30 +169,30 @@ Chaves usadas no `localStorage`:
 - `nutritionLogs`: refeições, água e aderência alimentar por data
 - `efl:workouts`: exercícios concluídos
 
-### ExerciseDB Opcional
+### Integração com ExerciseDB
 
-O app pode buscar GIFs/animações na ExerciseDB para substituir o placeholder visual dos exercícios.
+O app pode buscar GIFs/animações reais de exercícios na ExerciseDB para substituir os placeholders padrão.
 
-Crie um arquivo `.env.local` na raiz do projeto:
-
-```bash
-VITE_EXERCISEDB_API_KEY=sua_chave_rapidapi
-```
-
-Opcionalmente, se sua conta/API usar outro host ou base URL:
+Como configurar:
+1. Crie uma conta gratuita no RapidAPI.
+2. Assine o plano básico/teste da API ExerciseDB.
+3. Na raiz do projeto, crie um arquivo chamado `.env`.
+4. Adicione as chaves no formato:
 
 ```bash
+VITE_EXERCISEDB_API_KEY=minha_chave_real
 VITE_EXERCISEDB_API_HOST=exercisedb.p.rapidapi.com
-VITE_EXERCISEDB_API_BASE_URL=https://exercisedb.p.rapidapi.com
 ```
 
-Depois reinicie o servidor:
+> **Aviso de Segurança**: No desenvolvimento front-end com Vite, qualquer variável prefixada com `VITE_` é exposta no código final. Como este projeto é de uso pessoal/MVP, não há problema em injetá-la localmente. Se você for publicar comercialmente, recomenda-se criar um backend ou proxy seguro para não expor a chave de API.
+
+Depois de salvar o `.env`, reinicie o servidor:
 
 ```bash
 npm run dev
 ```
 
-Na tela `Treinos`, use a seção `Administração de GIFs` para buscar exercícios na ExerciseDB e mapear cada exercício local ao exercício externo. Se a API falhar ou a chave não estiver configurada, o app mantém o placeholder.
+Na tela `Treinos`, role até a seção `Mapeamento ExerciseDB`. Busque os exercícios em inglês (ex: *bench press*) e mapeie com o seu exercício local. A mídia importada aparecerá sempre no detalhe do seu treino! Se a API falhar ou você remover a chave, o app não irá quebrar e manterá o placeholder técnico graciosamente.
 
 ## PWA
 

@@ -238,7 +238,7 @@ export default function App() {
     checkin: <Checkin onSave={saveCheckin} />,
     evolucao: <Evolution checkins={normalizedCheckins} summary={summary} onDeleteCheckin={deleteCheckin} />,
     metas: <Goals latestCheckin={latestCheckin} weeklyCardios={weeklyCardios} />,
-    integracoes: <Integrations />,
+    integracoes: <Integrations onNavigate={setActiveTab} />,
     fotos: <Photos photos={photos} addPhoto={addPhoto} />,
   };
 
