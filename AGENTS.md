@@ -10,6 +10,7 @@ Este arquivo resume o estado atual do projeto para qualquer agente ou pessoa que
 - Ícone e splash Android foram substituídos por assets temporários profissionais com fundo escuro e marca verde/ciano.
 - Coach IA usa Gemini sob demanda quando `VITE_GEMINI_API_KEY` está presente.
 - ExerciseDB usa RapidAPI quando `VITE_EXERCISEDB_API_KEY` está presente.
+- Health Connect possui bridge nativa Android via plugin Capacitor local; web/PWA continua com importação assistida.
 - Dados do app continuam locais, via `localStorage`; não há backend.
 
 ## Variáveis de ambiente
@@ -80,6 +81,18 @@ Correção recente:
 - O botão muda para `Gerar novamente` quando já existe relatório salvo.
 - A chave usada para relatórios Gemini é `coachReports`.
 
+Novo fluxo de sugestões de treino:
+
+- `src/utils/workoutSuggestionEngine.js` gera sugestões locais com `analyzeWorkoutForSuggestions(data)`.
+- `src/utils/applyWorkoutSuggestion.js` aplica sugestões aprovadas no `customWorkoutPlan`.
+- `src/components/admin/AdminPlanPage.jsx` lista pendentes, aplicadas, rejeitadas e histórico.
+- `src/components/admin/WorkoutSuggestionCard.jsx` renderiza os cards de aprovação.
+- `src/components/admin/WorkoutChangeHistory.jsx` mostra o histórico.
+- `coachWorkoutSuggestions` guarda as sugestões.
+- `workoutChangeHistory` guarda alterações aplicadas.
+- Nenhuma sugestão altera treino sem confirmação do usuário.
+- `workoutPlan.js` continua sendo o plano padrão fixo.
+
 Se o usuário ainda vir análise cortada, a causa provável é relatório antigo já salvo no armazenamento local do app. Gerar novamente deve substituir.
 
 ## LocalStorage
@@ -100,7 +113,36 @@ Principais chaves atuais:
 - `weeklyProgressionSuggestions`
 - `coachWeeklyReports`
 - `coachReports`
+- `coachWorkoutSuggestions`
+- `workoutChangeHistory`
 - `nutritionLogs`
+- `pendingHealthImport`
+
+## Health Connect
+
+Arquivos principais:
+
+- `android/app/src/main/java/br/com/leandro/evolucaofitness/HealthConnectPlugin.kt`
+- `android/app/src/main/java/br/com/leandro/evolucaofitness/MainActivity.java`
+- `src/services/health/healthConnectNativeService.js`
+- `src/pages/Integrations.jsx`
+- `src/pages/Checkin.jsx`
+
+Configuração Android:
+
+- Dependência: `androidx.health.connect:connect-client:1.1.0-alpha12`
+- Kotlin Android plugin adicionado ao app nativo.
+- `minSdkVersion = 26`, exigido pelo SDK atual do Health Connect.
+- Manifest inclui queries para `com.google.android.apps.healthdata` e `com.sec.android.app.shealth`.
+- Permissões de leitura adicionadas: steps, weight, body fat, BMR, heart rate, sleep, active calories e total calories.
+- Rationale configurado com `androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE` e alias `VIEW_PERMISSION_USAGE`.
+
+Fluxo:
+
+- Android/Capacitor: Check-in chama Health Connect, pede permissões e preenche campos retornados sem apagar valores existentes.
+- Web/PWA: botão de importação abre a importação assistida manual.
+- Integrações mostra status real, permissões, importar dados de hoje e abrir configurações.
+- Não há integração Bluetooth direta, backend ou envio automático para Gemini.
 
 ## Funcionalidades implementadas
 
@@ -115,6 +157,8 @@ Principais chaves atuais:
 - Metas
 - Integrações futuras
 - Coach IA local + Gemini
+- Sugestões locais de treino com aprovação/admin
+- Health Connect nativo Android para preencher Check-in
 - Plano alimentar
 - PWA
 - Android via Capacitor
@@ -136,6 +180,6 @@ O build web ainda emite aviso de chunk grande por causa do bundle atual, mas nã
 
 - Testar no celular a nova geração do Coach IA após reinstalar/rodar o APK atualizado.
 - Implementar exportação/importação JSON de backup.
-- Preparar integração nativa futura com Health Connect via Capacitor.
+- Testar Health Connect em celular físico com Samsung Health/Fitdays sincronizados.
 - Melhorar code splitting para reduzir o aviso de chunk grande.
 - Revisar visual do menu mobile conforme feedback de uso real no aparelho.

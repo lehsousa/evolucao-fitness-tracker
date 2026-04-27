@@ -80,6 +80,21 @@ A função retorna este modelo:
 
 As recomendações são motivadoras e conservadoras: não fazem diagnóstico médico, não recomendam medicamentos, não sugerem suplementos arriscados e não alteram treino automaticamente. O botão `Salvar relatório` guarda um retrato da semana em `coachWeeklyReports`.
 
+### Sugestões de Treino pelo Coach
+
+Na tela `Coach IA`, o card `Sugestões de treino` roda regras locais com `analyzeWorkoutForSuggestions(data)`.
+
+O fluxo é:
+
+1. Coach analisa plano, cargas, RPE, substituições, check-ins, cardio e sono.
+2. Sugestões ficam salvas como `pending` em `coachWorkoutSuggestions`.
+3. A tela `Admin Plano` mostra pendentes, aplicadas, rejeitadas e histórico.
+4. O usuário aprova, edita ou rejeita.
+5. Ao aprovar, `applyWorkoutSuggestion(suggestion, currentPlan)` altera apenas o item necessário em `customWorkoutPlan`.
+6. Toda alteração aplicada é registrada em `workoutChangeHistory`.
+
+O plano padrão em `src/data/workoutPlan.js` nunca é alterado. A restauração do plano padrão continua disponível no Editor/Admin.
+
 ## Plano Alimentar
 
 A tela `Alimentar` organiza o plano inicial de alimentação para redução de gordura com preservação muscular.
@@ -166,6 +181,9 @@ Chaves usadas no `localStorage`:
 - `customWorkoutPlan`: plano editável salvo pelo usuário
 - `weeklyProgressionSuggestions`: sugestões e decisões registradas por data
 - `coachWeeklyReports`: relatórios semanais salvos pelo Coach IA
+- `coachReports`: histórico de relatórios Gemini gerados manualmente
+- `coachWorkoutSuggestions`: sugestões locais de alteração do treino geradas pelo Coach
+- `workoutChangeHistory`: histórico de alterações aprovadas no plano
 - `nutritionLogs`: refeições, água e aderência alimentar por data
 - `efl:workouts`: exercícios concluídos
 
@@ -194,7 +212,7 @@ npm run dev
 
 ## Integração com Gemini API (Coach IA Gratuita)
 
-O projeto também possui uma integração opcional e sob demanda com a IA do Google (Gemini 1.5 Flash) na tela do **Coach**. Em vez de usar um motor de regras estáticas locais, a IA recebe um mini-resumo compactado numérico da sua semana (nunca seus dados completos para poupar tokens e preservar privacidade) e devolve 3 ações conservadoras para sua próxima semana de treinos.
+O projeto também possui uma integração opcional e sob demanda com a IA do Google (Gemini 2.5 Flash) na tela do **Coach**. A análise local continua disponível; a IA recebe apenas um mini-resumo compactado numérico da sua semana (nunca fotos, exames, histórico bruto ou dados pessoais sensíveis) e devolve uma resposta curta e conservadora para a próxima semana.
 
 Para ativar essa funcionalidade:
 1. Acesse o [Google AI Studio](https://aistudio.google.com/).
@@ -203,7 +221,50 @@ Para ativar essa funcionalidade:
 ```env
 VITE_GEMINI_API_KEY=sua_chave_aqui
 ```
-4. Ao abrir o App na aba Coach, o botão mágico roxo de IA será habilitado. Se ocorrer alguma falha de rede ou falta de chave, o app possui mecanismo inteligente de _fallback_ e sempre renderizará a análise local como segurança.
+4. Ao abrir o App na aba Coach, o botão roxo de IA será habilitado. A geração é sempre manual e cada resposta é adicionada ao histórico `coachReports`. Se ocorrer falha de rede, erro de API ou falta de chave, o app mostra erro amigável e mantém a análise local como segurança.
+
+## Health Connect
+
+A integração real com Health Connect funciona apenas no app Android via Capacitor. No navegador/PWA, o app mantém a importação assistida manual.
+
+O fluxo esperado é:
+
+```text
+Galaxy Fit3 -> Samsung Health -> Health Connect -> Evolução Fitness
+Balança Multilaser/Fitdays -> Fitdays -> Health Connect -> Evolução Fitness
+```
+
+Dados suportados inicialmente:
+
+- Peso
+- Gordura corporal
+- Metabolismo basal
+- Passos
+- Sono
+- Frequência cardíaca média
+- Calorias ativas e totais
+
+Dados como massa muscular, gordura visceral e água corporal dependem da fonte e podem continuar manuais quando não forem publicados no Health Connect.
+
+Para testar no celular:
+
+1. Sincronize a Galaxy Fit3 com Samsung Health.
+2. Sincronize a balança com Fitdays.
+3. Ative o compartilhamento dos dados com Health Connect.
+4. Abra o app Evolução Fitness no Android.
+5. Vá em `Integrações`.
+6. Toque em `Verificar disponibilidade`.
+7. Toque em `Solicitar permissões`.
+8. Use `Importar dados de hoje` ou vá em `Check-in` e toque em `Importar dados de saúde`.
+9. Revise os dados importados antes de salvar.
+
+Configuração nativa adicionada:
+
+- Plugin Capacitor local: `HealthConnectPlugin`
+- Serviço JS: `src/services/health/healthConnectNativeService.js`
+- Dependência Android: `androidx.health.connect:connect-client:1.1.0-alpha12`
+- `minSdkVersion`: 26, exigido pelo SDK atual do Health Connect
+- Os dados importados ficam no `localStorage` junto ao check-in. Nada é enviado para backend ou para Gemini automaticamente.
 
 ## Transformação para Aplicativo Android (Capacitor)
 

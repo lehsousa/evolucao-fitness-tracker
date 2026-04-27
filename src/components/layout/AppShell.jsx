@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Activity, BarChart3, BrainCircuit, Camera, Dumbbell, FilePenLine, HeartPulse, Home, ListChecks, PlugZap, Sparkles, Target, Utensils } from 'lucide-react';
+import { Activity, BarChart3, BrainCircuit, Camera, Dumbbell, FilePenLine, HeartPulse, Home, ListChecks, PlugZap, ShieldCheck, Sparkles, Target, Utensils } from 'lucide-react';
 
 import { DesktopSidebar } from './DesktopSidebar';
 import { MobileBottomNav } from './MobileBottomNav';
@@ -10,6 +10,7 @@ const tabs = [
   { id: 'coach', label: 'Coach IA', icon: BrainCircuit },
   { id: 'treinos', label: 'Treinos', icon: Dumbbell },
   { id: 'editor-treino', label: 'Editor', icon: FilePenLine },
+  { id: 'admin-plano', label: 'Admin Plano', icon: ShieldCheck },
   { id: 'sugestoes', label: 'Sugestões', icon: Sparkles },
   { id: 'nutricao', label: 'Alimentação', icon: Utensils },
   { id: 'cardio', label: 'Cardio', icon: HeartPulse },

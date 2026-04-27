@@ -2,6 +2,15 @@ import { Save, AlertTriangle, Wand2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { todayKey } from '../utils/date.js';
 import { AssistedImportModal } from '../components/integrations/AssistedImportModal';
+import {
+  checkHealthPermissions,
+  hasAllHealthPermissions,
+  hasAnyHealthPermission,
+  isAndroidNative,
+  isNativeHealthConnectAvailable,
+  readTodayHealthData,
+  requestHealthPermissions,
+} from '../services/health/healthConnectNativeService.js';
 
 const initialForm = {
   date: todayKey(),
@@ -31,6 +40,9 @@ export function Checkin({ onSave }) {
   const [form, setForm] = useState(initialForm);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [showImportAlert, setShowImportAlert] = useState(false);
+  const [importAlertMessage, setImportAlertMessage] = useState('');
+  const [importError, setImportError] = useState('');
+  const [isImportingHealth, setIsImportingHealth] = useState(false);
 
   useEffect(() => {
     checkPendingImport();
@@ -53,9 +65,9 @@ export function Checkin({ onSave }) {
           sleepHours: data.sleepHours || prev.sleepHours,
           avgHeartRate: data.avgHeartRate || prev.avgHeartRate,
           estimatedCalories: data.estimatedCalories || prev.estimatedCalories,
-          source: 'importacao_assistida'
+          source: data.source || 'importacao_assistida'
         }));
-        setShowImportAlert(true);
+        showImportSuccess('Dados importados da importação assistida. Revise antes de salvar.');
       } catch (e) {
         console.error('Failed to parse pendingHealthImport', e);
       }
@@ -88,6 +100,67 @@ export function Checkin({ onSave }) {
     window.localStorage.removeItem('pendingHealthImport');
   }
 
+  async function handleImportHealthData() {
+    setImportError('');
+
+    if (!isAndroidNative()) {
+      setIsImportModalOpen(true);
+      return;
+    }
+
+    setIsImportingHealth(true);
+    try {
+      const availability = await isNativeHealthConnectAvailable();
+      if (!availability.available) {
+        setImportError(availability.message || 'Health Connect não está disponível neste aparelho.');
+        setIsImportModalOpen(true);
+        return;
+      }
+
+      let permissions = await checkHealthPermissions();
+      if (!hasAllHealthPermissions(permissions)) {
+        permissions = await requestHealthPermissions();
+      }
+
+      if (!hasAnyHealthPermission(permissions)) {
+        setImportError('Permissões do Health Connect pendentes. Você pode preencher manualmente ou tentar novamente depois.');
+        return;
+      }
+
+      const result = await readTodayHealthData();
+      if (!result.ok || !result.data) {
+        setImportError(result.message || 'Não foi possível importar automaticamente. Você pode preencher manualmente os dados do Fitdays ou Samsung Health.');
+        return;
+      }
+
+      applyHealthConnectData(result.data);
+      showImportSuccess('Dados importados do Health Connect. Revise antes de salvar.');
+    } finally {
+      setIsImportingHealth(false);
+    }
+  }
+
+  function applyHealthConnectData(data) {
+    setForm((current) => ({
+      ...current,
+      date: data.date || current.date,
+      weight: valueOrCurrent(data.weight, current.weight),
+      bodyFat: valueOrCurrent(data.bodyFat, current.bodyFat),
+      bmr: valueOrCurrent(data.bmr, current.bmr),
+      steps: valueOrCurrent(data.steps, current.steps),
+      sleepHours: valueOrCurrent(data.sleepHours, current.sleepHours),
+      avgHeartRate: valueOrCurrent(data.avgHeartRate, current.avgHeartRate),
+      estimatedCalories: valueOrCurrent(data.estimatedCalories ?? data.totalCalories, current.estimatedCalories),
+      source: 'health_connect',
+    }));
+  }
+
+  function showImportSuccess(message) {
+    setImportAlertMessage(message);
+    setShowImportAlert(true);
+    setImportError('');
+  }
+
   return (
     <div className="mx-auto max-w-4xl space-y-4">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -97,11 +170,12 @@ export function Checkin({ onSave }) {
         </div>
         <button 
           type="button"
-          onClick={() => setIsImportModalOpen(true)}
+          onClick={handleImportHealthData}
+          disabled={isImportingHealth}
           className="flex min-h-10 items-center justify-center gap-2 rounded-lg border border-line bg-ink px-4 text-sm font-bold text-white transition hover:border-mint hover:text-mint"
         >
           <Wand2 size={16} />
-          Importar dados de saúde
+          {isImportingHealth ? 'Importando...' : 'Importar dados de saúde'}
         </button>
       </div>
 
@@ -110,7 +184,17 @@ export function Checkin({ onSave }) {
           <AlertTriangle size={20} className="shrink-0 mt-0.5" />
           <div className="text-sm">
             <p className="font-bold">Dados importados pendentes.</p>
-            <p className="mt-1 opacity-90">Revise os valores inseridos pela importação assistida e preencha sua cintura antes de salvar.</p>
+            <p className="mt-1 opacity-90">{importAlertMessage || 'Revise os valores inseridos e preencha sua cintura antes de salvar.'}</p>
+          </div>
+        </div>
+      )}
+
+      {importError && (
+        <div className="flex items-start gap-3 rounded-xl border border-coral/30 bg-coral/10 p-4 text-coral">
+          <AlertTriangle size={20} className="mt-0.5 shrink-0" />
+          <div className="text-sm">
+            <p className="font-bold">Importação automática indisponível.</p>
+            <p className="mt-1 opacity-90">{importError}</p>
           </div>
         </div>
       )}
@@ -197,4 +281,8 @@ function Field({ label, value, onChange, step }) {
 
 function toNumber(value) {
   return value === '' || value === null || value === undefined ? 0 : Number(value);
+}
+
+function valueOrCurrent(value, current) {
+  return value === null || value === undefined || value === '' ? current : String(value);
 }

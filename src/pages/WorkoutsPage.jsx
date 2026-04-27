@@ -29,7 +29,7 @@ export function WorkoutsPage({ workoutDone, toggleExercise }) {
   const [initialMode, setInitialMode] = useState('details');
   const activeWorkout = useMemo(
     () => workoutPlan.find((workout) => workout.id === selectedWorkoutDay) || workoutPlan[0],
-    [selectedWorkoutDay],
+    [selectedWorkoutDay, workoutPlan],
   );
 
   function openExercise(planItem, mode = 'details') {

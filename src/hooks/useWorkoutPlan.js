@@ -42,6 +42,8 @@ function normalizePlan(plan) {
           reps: String(item.reps || ''),
           restSeconds: Number(item.restSeconds) || 0,
           notes: item.notes || '',
+          adjustedByCoach: Boolean(item.adjustedByCoach),
+          coachSuggestionId: item.coachSuggestionId || '',
           id: item.id || `${workout.id || index}-item-${itemIndex}`,
         }))
       : [],

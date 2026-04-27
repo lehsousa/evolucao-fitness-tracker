@@ -1,15 +1,20 @@
-import { AlertTriangle, BrainCircuit, CheckCircle2, Dumbbell, HeartPulse, Loader2, Moon, Save, Scale, Sparkles, Target, Bot } from 'lucide-react';
+import { AlertTriangle, BrainCircuit, CheckCircle2, Dumbbell, HeartPulse, Loader2, Moon, Save, Scale, Sparkles, Target, Bot, ShieldCheck } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useExerciseHistory } from '../hooks/useExerciseHistory.js';
 import { useLocalStorage } from '../hooks/useLocalStorage.js';
+import { useWorkoutPlan } from '../hooks/useWorkoutPlan.js';
 import { weekKey, todayKey } from '../utils/date.js';
 import { generateWeeklyCoachReport } from '../utils/coachUtils.js';
+import { analyzeWorkoutForSuggestions } from '../utils/workoutSuggestionEngine.js';
 import { isGeminiConfigured, generateGeminiCoachReport } from '../services/ai/geminiCoachService.js';
 
-export function CoachAI({ checkins, workoutDoneByDate, cardioDoneByWeek }) {
-  const { history } = useExerciseHistory();
+export function CoachAI({ checkins, workoutDoneByDate, cardioDoneByWeek, onNavigate }) {
+  const { history, substitutions } = useExerciseHistory();
+  const { plan } = useWorkoutPlan();
   const [savedReports, setSavedReports] = useLocalStorage('coachWeeklyReports', {});
   const [aiReports, setAiReports] = useLocalStorage('coachReports', []);
+  const [workoutSuggestions, setWorkoutSuggestions] = useLocalStorage('coachWorkoutSuggestions', []);
+  const [nutritionLogs] = useLocalStorage('nutritionLogs', {});
   
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
   const [aiError, setAiError] = useState('');
@@ -63,12 +68,12 @@ export function CoachAI({ checkins, workoutDoneByDate, cardioDoneByWeek }) {
 
       setAiReports(current => {
         const safeArr = Array.isArray(current) ? current : [];
-        return [newReport, ...safeArr.filter(r => r.summary?.week !== summary.week)];
+        return [newReport, ...safeArr];
       });
       
     } catch (err) {
       console.error(err);
-      setAiError(err?.message || 'IA gratuita indisponível. Mantive a análise local.');
+      setAiError('Não foi possível gerar análise com IA. Mantive a análise local disponível.');
     } finally {
       setIsGeneratingAI(false);
     }
@@ -76,6 +81,34 @@ export function CoachAI({ checkins, workoutDoneByDate, cardioDoneByWeek }) {
 
   const configured = isGeminiConfigured();
   const currentReportLooksIncomplete = currentAiReport?.report ? looksIncomplete(currentAiReport.report) : false;
+  const pendingWorkoutSuggestions = Array.isArray(workoutSuggestions)
+    ? workoutSuggestions.filter((item) => item.status === 'pending' || item.status === 'edited')
+    : [];
+
+  function handleGenerateWorkoutSuggestions() {
+    const generated = analyzeWorkoutForSuggestions({
+      plan,
+      completedExercises: workoutDoneByDate,
+      exerciseLoadHistory: history,
+      workoutSubstitutions: substitutions,
+      checkins,
+      cardioLogs: cardioDoneByWeek,
+      nutritionDailyLogs: nutritionLogs,
+      week: weekKey(),
+    });
+
+    setWorkoutSuggestions((current) => {
+      const safeCurrent = Array.isArray(current) ? current : [];
+      const activeKeys = new Set(
+        safeCurrent
+          .filter((item) => item.status === 'pending' || item.status === 'edited')
+          .map((item) => `${item.type}-${item.dayId}-${item.exerciseId}-${item.suggestedExerciseId}-${item.suggestedSets}-${item.suggestedRestSeconds}`),
+      );
+      const fresh = generated.filter((item) => !activeKeys.has(`${item.type}-${item.dayId}-${item.exerciseId}-${item.suggestedExerciseId}-${item.suggestedSets}-${item.suggestedRestSeconds}`));
+      return [...fresh, ...safeCurrent];
+    });
+    window.alert('Sugestões geradas. Revise antes de aplicar.');
+  }
 
   return (
     <div className="space-y-4">
@@ -92,7 +125,7 @@ export function CoachAI({ checkins, workoutDoneByDate, cardioDoneByWeek }) {
                   <span className={`rounded-lg px-2 py-0.5 text-[0.65rem] font-black uppercase tracking-wide ${
                     configured ? 'bg-mint/10 text-mint border border-mint/20' : 'bg-amberFit/10 text-amberFit border border-amberFit/20'
                   }`}>
-                    {configured ? 'Gemini configurado' : 'IA não configurada'}
+                    {configured ? 'Gemini configurado' : 'Gemini não configurado'}
                   </span>
                 </div>
                 <h1 className="mt-1 text-2xl font-black text-white sm:text-3xl">Relatório semanal inteligente</h1>
@@ -110,7 +143,7 @@ export function CoachAI({ checkins, workoutDoneByDate, cardioDoneByWeek }) {
                 className="flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-purple-500 px-4 font-black text-white transition hover:bg-purple-400 disabled:opacity-50 lg:w-auto"
               >
                 {isGeneratingAI ? <Loader2 size={18} className="animate-spin" /> : <Bot size={18} />}
-                {currentAiReport ? 'Gerar novamente' : 'Gerar análise com IA gratuita'}
+                {isGeneratingAI ? 'Gerando análise com IA...' : currentAiReport ? 'Gerar novamente' : 'Gerar análise com IA gratuita'}
               </button>
               
               <button 
@@ -151,6 +184,34 @@ export function CoachAI({ checkins, workoutDoneByDate, cardioDoneByWeek }) {
           <CoachReportText text={currentAiReport.report} />
         </section>
       )}
+
+      <section className="card p-4 sm:p-5 border border-cyanFit/30">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <p className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-cyanFit">
+              <ShieldCheck size={18} />
+              Sugestões de treino
+            </p>
+            <h2 className="mt-1 text-xl font-black text-white">{pendingWorkoutSuggestions.length} pendente(s) para aprovação</h2>
+            <p className="mt-2 text-sm text-slate-400">
+              O Coach usa regras locais para sugerir ajustes. Nada é aplicado sem aprovação no Admin do Plano.
+            </p>
+            {pendingWorkoutSuggestions[0] && (
+              <p className="mt-3 rounded-lg bg-ink px-3 py-2 text-sm font-semibold text-slate-300">
+                Principal: {pendingWorkoutSuggestions[0].reason}
+              </p>
+            )}
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2 lg:w-80">
+            <button type="button" onClick={handleGenerateWorkoutSuggestions} className="min-h-11 rounded-lg bg-mint px-4 font-black text-ink transition hover:bg-green-300">
+              Gerar sugestões
+            </button>
+            <button type="button" onClick={() => onNavigate?.('admin-plano')} className="min-h-11 rounded-lg border border-line px-4 font-black text-white transition hover:border-cyanFit hover:text-cyanFit">
+              Ver sugestões
+            </button>
+          </div>
+        </div>
+      </section>
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Metric icon={Scale} label="Peso inicial" value={formatKg(summary.initialWeight)} />

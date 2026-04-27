@@ -40,6 +40,12 @@ export function ExerciseCard({
         </div>
       )}
 
+      {planItem.adjustedByCoach && (
+        <div className="mt-3 rounded-lg border border-cyanFit/30 bg-cyanFit/10 px-3 py-2 text-xs font-bold text-cyanFit" title={planItem.notes || 'Alterado por sugestão do Coach'}>
+          Ajustado pelo Coach
+        </div>
+      )}
+
       <div className="mt-4 grid grid-cols-3 gap-2">
         <Mini label="Séries" value={planItem.sets} />
         <Mini label="Reps" value={planItem.reps} />

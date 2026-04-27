@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AppShell } from './components/layout/AppShell.jsx';
+import { AdminPlanPage } from './components/admin/AdminPlanPage.jsx';
 import { dailyChecklist, defaultReminders, goals } from './data/plan.js';
 import { useLocalStorage } from './hooks/useLocalStorage.js';
 import { useNotifications } from './hooks/useNotifications.js';
@@ -32,6 +33,9 @@ const storageKeys = [
   'customWorkoutPlan',
   'weeklyProgressionSuggestions',
   'coachWeeklyReports',
+  'coachReports',
+  'coachWorkoutSuggestions',
+  'workoutChangeHistory',
   'nutritionLogs',
 ];
 
@@ -228,11 +232,13 @@ export default function App() {
         checkins={normalizedCheckins}
         workoutDoneByDate={workoutDoneByDate}
         cardioDoneByWeek={cardioDoneByWeek}
+        onNavigate={setActiveTab}
       />
     ),
     treinos: <Workouts workoutDone={workoutDone} toggleExercise={toggleExercise} />,
     'editor-treino': <WorkoutEditor />,
     sugestoes: <WeeklySuggestions workoutDone={workoutDone} cardioDone={cardioDone} onEditPlan={() => setActiveTab('editor-treino')} />,
+    'admin-plano': <AdminPlanPage />,
     nutricao: <NutritionPage latestCheckin={latestCheckin} />,
     cardio: <Cardio cardioDone={cardioDone} toggleCardio={toggleCardio} />,
     checkin: <Checkin onSave={saveCheckin} />,
