@@ -2,12 +2,14 @@ import { useEffect, useState } from 'react';
 import { Bluetooth, Download, ExternalLink, Link2, Scale, Settings, ShieldCheck, Smartphone, Wand2 } from 'lucide-react';
 import { IntegrationInstructionModal } from '../components/integrations/IntegrationInstructionModal';
 import { AssistedImportModal } from '../components/integrations/AssistedImportModal';
+import EnhancedHealthDiagnostics from '../components/integrations/EnhancedHealthDiagnostics';
 import {
   checkHealthPermissions,
   hasAllHealthPermissions,
   hasAnyHealthPermission,
   isNativeHealthConnectAvailable,
   openHealthConnectSettings,
+  readHealthConnectDiagnostics,
   readTodayHealthData,
   requestHealthPermissions,
 } from '../services/health/healthConnectNativeService.js';
@@ -17,6 +19,7 @@ export function Integrations({ onNavigate }) {
   const [healthStatus, setHealthStatus] = useState({ status: 'unknown', message: 'Ainda não verificado' });
   const [healthPermissions, setHealthPermissions] = useState(null);
   const [healthFeedback, setHealthFeedback] = useState('');
+  const [healthDiagnostics, setHealthDiagnostics] = useState(null);
   const [isHealthLoading, setIsHealthLoading] = useState(false);
 
   useEffect(() => {
@@ -91,7 +94,7 @@ export function Integrations({ onNavigate }) {
         ...result.data,
         source: 'health_connect',
       }));
-      setHealthFeedback('Dados de hoje importados. Abra o Check-in para revisar e salvar.');
+      setHealthFeedback(buildHealthFeedback(result.data));
       if (onNavigate) onNavigate('checkin');
     } finally {
       setIsHealthLoading(false);
@@ -101,6 +104,30 @@ export function Integrations({ onNavigate }) {
   async function openSettings() {
     const result = await openHealthConnectSettings();
     if (result?.message) setHealthFeedback(result.message);
+  }
+
+  async function runHealthDiagnostics() {
+    setIsHealthLoading(true);
+    setHealthFeedback('');
+    try {
+      let permissions = healthPermissions || await checkHealthPermissions();
+      if (!hasAnyHealthPermission(permissions)) {
+        permissions = await requestHealthPermissions();
+        setHealthPermissions(permissions);
+      }
+
+      const result = await readHealthConnectDiagnostics();
+      if (!result.ok || !result.data) {
+        setHealthFeedback(result.message || 'Nao foi possivel diagnosticar os dados publicados no Health Connect.');
+        return;
+      }
+
+      setHealthDiagnostics(result.data);
+      const found = result.data.records?.filter((item) => item.found).length || 0;
+      setHealthFeedback(`Diagnostico concluido: ${found} tipos de dados encontrados no Health Connect.`);
+    } finally {
+      setIsHealthLoading(false);
+    }
   }
 
   const modalsData = {
@@ -239,9 +266,48 @@ export function Integrations({ onNavigate }) {
             <button type="button" onClick={openSettings} className={healthButtonClass}>
               <Settings size={18} /> Abrir configurações
             </button>
+            <button type="button" onClick={runHealthDiagnostics} disabled={isHealthLoading} className={healthButtonClass}>
+              <ShieldCheck size={18} /> Diagnosticar Health Connect
+            </button>
+            <EnhancedHealthDiagnostics buttonClassName={healthButtonClass} />
           </div>
           {healthFeedback && (
             <p className="mt-3 rounded-lg border border-amberFit/30 bg-amberFit/10 px-3 py-2 text-sm font-semibold text-amberFit">{healthFeedback}</p>
+          )}
+          {healthDiagnostics && (
+            <div className="mt-4 rounded-xl border border-line bg-panelSoft/70 p-3">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="text-sm font-black text-white">Diagnostico de dados publicados</h3>
+                  <p className="mt-1 text-xs text-slate-400">
+                    Composicao corporal: ultimos {healthDiagnostics.recentWindowDays || 30} dias. Atividade, sono e batimentos: hoje.
+                  </p>
+                </div>
+                <span className="rounded-lg bg-ink px-2 py-1 text-xs font-bold text-slate-400">
+                  {formatDiagnosticDate(healthDiagnostics.generatedAt)}
+                </span>
+              </div>
+              <div className="mt-3 grid gap-2">
+                {(healthDiagnostics.records || []).map((item) => (
+                  <div key={item.key} className="rounded-lg border border-line bg-ink p-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-black text-white">{item.label}</p>
+                        <p className="mt-1 text-xs text-slate-500">
+                          {item.sourceName ? `Origem: ${item.sourceName}` : 'Origem nao informada'}
+                          {item.recordCount ? ` - ${item.recordCount} registro(s)` : ''}
+                        </p>
+                      </div>
+                      <span className={`rounded-lg px-2 py-1 text-xs font-black ${item.found ? 'bg-mint/10 text-mint' : 'bg-coral/10 text-coral'}`}>
+                        {item.found ? `${item.value} ${item.unit}` : 'ausente'}
+                      </span>
+                    </div>
+                    {item.lastSeenAt && <p className="mt-2 text-xs text-slate-500">Ultimo registro: {formatDiagnosticDate(item.lastSeenAt)}</p>}
+                    {item.sourcePackage && <p className="mt-1 break-all text-xs text-slate-600">{item.sourcePackage}</p>}
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
           {healthPermissions && (
             <div className="mt-3 grid grid-cols-2 gap-2 text-xs font-bold text-slate-400">
@@ -275,6 +341,7 @@ export function Integrations({ onNavigate }) {
 
       <AssistedImportModal
         isOpen={openModal === 'assisted'}
+        source="importacao_assistida"
         onClose={() => setOpenModal(null)}
         onSuccess={() => {
           setOpenModal(null);
@@ -291,6 +358,20 @@ function statusClass(status) {
   return 'border-coral/30 bg-coral/10 text-coral';
 }
 
+function formatDiagnosticDate(value) {
+  if (!value) return '--';
+  try {
+    return new Intl.DateTimeFormat('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(new Date(value));
+  } catch {
+    return value;
+  }
+}
+
 const healthButtonClass = 'flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-line bg-ink px-4 text-sm font-black text-white transition hover:border-cyanFit hover:text-cyanFit disabled:opacity-60';
 
 function permissionLabel(key) {
@@ -298,10 +379,39 @@ function permissionLabel(key) {
     steps: 'passos',
     weight: 'peso',
     bodyFat: 'gordura',
+    muscleMass: 'massa magra',
+    bodyWaterMass: 'água kg',
+    boneMass: 'massa óssea',
     bmr: 'bmr',
     heartRate: 'batimentos',
     sleep: 'sono',
     activeCalories: 'cal. ativas',
     totalCalories: 'cal. totais',
   }[key] || key;
+}
+
+function buildHealthFeedback(data) {
+  const imported = readableFieldList(data?.importedFields);
+  const missing = readableFieldList(data?.missingFields);
+  if (!imported) return 'Health Connect respondeu, mas não publicou valores para hoje. Confira se Samsung Health/Fitdays estão compartilhando dados.';
+  return `Importado: ${imported}. ${missing ? `Sem dados hoje para: ${missing}. ` : ''}${data?.bodyCompositionWindowDays ? `Composição corporal buscada nos últimos ${data.bodyCompositionWindowDays} dias. ` : ''}Abra o Check-in para revisar e salvar.`;
+}
+
+function readableFieldList(fields) {
+  if (!Array.isArray(fields) || !fields.length) return '';
+  const labels = {
+    weight: 'peso',
+    bodyFat: 'gordura corporal',
+    muscleMass: 'massa magra',
+    bodyWaterMass: 'água corporal em kg',
+    boneMass: 'massa óssea',
+    bmr: 'metabolismo basal',
+    steps: 'passos',
+    sleepHours: 'sono',
+    avgHeartRate: 'frequência cardíaca',
+    activeCalories: 'calorias ativas',
+    totalCalories: 'calorias totais',
+    estimatedCalories: 'calorias estimadas',
+  };
+  return fields.map((field) => labels[field] || field).join(', ');
 }

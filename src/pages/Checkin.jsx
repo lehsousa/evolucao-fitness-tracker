@@ -67,7 +67,7 @@ export function Checkin({ onSave }) {
           estimatedCalories: data.estimatedCalories || prev.estimatedCalories,
           source: data.source || 'importacao_assistida'
         }));
-        showImportSuccess('Dados importados da importação assistida. Revise antes de salvar.');
+        showImportSuccess(`Dados preenchidos via ${sourceLabel(data.source)}. Revise antes de salvar.`);
       } catch (e) {
         console.error('Failed to parse pendingHealthImport', e);
       }
@@ -103,6 +103,11 @@ export function Checkin({ onSave }) {
   async function handleImportHealthData() {
     setImportError('');
 
+    if (shouldUseAssistedImport(form.source)) {
+      setIsImportModalOpen(true);
+      return;
+    }
+
     if (!isAndroidNative()) {
       setIsImportModalOpen(true);
       return;
@@ -112,7 +117,7 @@ export function Checkin({ onSave }) {
     try {
       const availability = await isNativeHealthConnectAvailable();
       if (!availability.available) {
-        setImportError(availability.message || 'Health Connect não está disponível neste aparelho.');
+        setImportError(`${availability.message || 'Health Connect não está disponível neste aparelho.'} Use Samsung Health/Fitdays pela importação assistida.`);
         setIsImportModalOpen(true);
         return;
       }
@@ -134,7 +139,7 @@ export function Checkin({ onSave }) {
       }
 
       applyHealthConnectData(result.data);
-      showImportSuccess('Dados importados do Health Connect. Revise antes de salvar.');
+      showImportSuccess(buildHealthImportMessage(result.data));
     } finally {
       setIsImportingHealth(false);
     }
@@ -146,6 +151,8 @@ export function Checkin({ onSave }) {
       date: data.date || current.date,
       weight: valueOrCurrent(data.weight, current.weight),
       bodyFat: valueOrCurrent(data.bodyFat, current.bodyFat),
+      muscleMass: valueOrCurrent(data.muscleMass, current.muscleMass),
+      bodyWater: valueOrCurrent(data.bodyWater ?? data.bodyWaterMass, current.bodyWater),
       bmr: valueOrCurrent(data.bmr, current.bmr),
       steps: valueOrCurrent(data.steps, current.steps),
       sleepHours: valueOrCurrent(data.sleepHours, current.sleepHours),
@@ -175,7 +182,7 @@ export function Checkin({ onSave }) {
           className="flex min-h-10 items-center justify-center gap-2 rounded-lg border border-line bg-ink px-4 text-sm font-bold text-white transition hover:border-mint hover:text-mint"
         >
           <Wand2 size={16} />
-          {isImportingHealth ? 'Importando...' : 'Importar dados de saúde'}
+          {isImportingHealth ? 'Importando...' : importButtonLabel(form.source)}
         </button>
       </div>
 
@@ -216,7 +223,7 @@ export function Checkin({ onSave }) {
             <Field label="Gordura corporal (%)" value={form.bodyFat} onChange={(value) => updateField('bodyFat', value)} step="0.1" />
             <Field label="Massa muscular (kg)" value={form.muscleMass} onChange={(value) => updateField('muscleMass', value)} step="0.1" />
             <Field label="Gordura visceral" value={form.visceralFat} onChange={(value) => updateField('visceralFat', value)} step="0.1" />
-            <Field label="Água corporal (%)" value={form.bodyWater} onChange={(value) => updateField('bodyWater', value)} step="0.1" />
+            <Field label="Água corporal (% ou kg)" value={form.bodyWater} onChange={(value) => updateField('bodyWater', value)} step="0.1" />
             <Field label="Metabolismo basal" value={form.bmr} onChange={(value) => updateField('bmr', value)} step="1" />
             <Field label="Sono em horas" value={form.sleepHours} onChange={(value) => updateField('sleepHours', value)} step="0.1" />
             <Field label="Frequência cardíaca média" value={form.avgHeartRate} onChange={(value) => updateField('avgHeartRate', value)} step="1" />
@@ -231,6 +238,9 @@ export function Checkin({ onSave }) {
               <option key={source.value} value={source.value}>{source.label}</option>
             ))}
           </select>
+          <p className="mt-2 text-xs font-semibold text-slate-500">
+            Health Connect importa automaticamente. Samsung Health e Fitdays usam importação assistida, porque o Android não libera leitura direta desses apps.
+          </p>
         </section>
 
         <button type="submit" className="flex min-h-12 w-full items-center justify-center gap-2 rounded-lg bg-mint px-4 font-black text-ink transition hover:bg-green-300">
@@ -241,6 +251,7 @@ export function Checkin({ onSave }) {
 
       <AssistedImportModal 
         isOpen={isImportModalOpen}
+        source={assistedSourceFor(form.source)}
         onClose={() => setIsImportModalOpen(false)}
         onSuccess={() => {
           setIsImportModalOpen(false);
@@ -285,4 +296,61 @@ function toNumber(value) {
 
 function valueOrCurrent(value, current) {
   return value === null || value === undefined || value === '' ? current : String(value);
+}
+
+function shouldUseAssistedImport(source) {
+  return source === 'samsung_health' || source === 'fitdays' || source === 'importacao_assistida';
+}
+
+function assistedSourceFor(source) {
+  return shouldUseAssistedImport(source) ? source : 'importacao_assistida';
+}
+
+function importButtonLabel(source) {
+  if (source === 'samsung_health') return 'Preencher dados do Samsung Health';
+  if (source === 'fitdays') return 'Preencher dados do Fitdays';
+  if (source === 'importacao_assistida') return 'Abrir importação assistida';
+  return 'Importar via Health Connect';
+}
+
+function sourceLabel(source) {
+  if (source === 'samsung_health') return 'Samsung Health';
+  if (source === 'fitdays') return 'Fitdays';
+  if (source === 'health_connect') return 'Health Connect';
+  if (source === 'manual') return 'Manual';
+  return 'importação assistida';
+}
+
+function buildHealthImportMessage(data) {
+  const imported = readableFieldList(data?.importedFields);
+  const missing = readableFieldList(data?.missingFields);
+  const parts = [];
+
+  if (imported) parts.push(`Importado: ${imported}.`);
+  else parts.push('Nenhum campo com valor foi encontrado no Health Connect.');
+
+  if (missing) parts.push(`Sem dados publicados hoje para: ${missing}.`);
+  if (data?.bodyCompositionWindowDays) parts.push(`Composição corporal também foi buscada nos últimos ${data.bodyCompositionWindowDays} dias.`);
+  parts.push('Revise antes de salvar.');
+
+  return parts.join(' ');
+}
+
+function readableFieldList(fields) {
+  if (!Array.isArray(fields) || !fields.length) return '';
+  const labels = {
+    weight: 'peso',
+    bodyFat: 'gordura corporal',
+    muscleMass: 'massa magra',
+    bodyWaterMass: 'água corporal em kg',
+    boneMass: 'massa óssea',
+    bmr: 'metabolismo basal',
+    steps: 'passos',
+    sleepHours: 'sono',
+    avgHeartRate: 'frequência cardíaca',
+    activeCalories: 'calorias ativas',
+    totalCalories: 'calorias totais',
+    estimatedCalories: 'calorias estimadas',
+  };
+  return fields.map((field) => labels[field] || field).join(', ');
 }

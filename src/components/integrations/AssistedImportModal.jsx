@@ -8,7 +8,7 @@ const initialForm = {
   avgHeartRate: '', estimatedCalories: ''
 };
 
-export function AssistedImportModal({ isOpen, onClose, onSuccess }) {
+export function AssistedImportModal({ isOpen, onClose, onSuccess, source = 'importacao_assistida' }) {
   const [form, setForm] = useState(initialForm);
 
   function updateField(field, value) {
@@ -26,6 +26,7 @@ export function AssistedImportModal({ isOpen, onClose, onSuccess }) {
     // Salva no localStorage com timestamp (para expirar se quiser, mas mantemos simples)
     window.localStorage.setItem('pendingHealthImport', JSON.stringify({
       ...parsed,
+      source,
       timestamp: new Date().toISOString()
     }));
     
@@ -50,7 +51,7 @@ export function AssistedImportModal({ isOpen, onClose, onSuccess }) {
             className="relative w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden rounded-2xl border border-line bg-panel shadow-2xl"
           >
             <div className="flex items-center justify-between border-b border-line p-4">
-              <h2 className="text-xl font-black text-white">Importação Assistida</h2>
+              <h2 className="text-xl font-black text-white">{modalTitle(source)}</h2>
               <button onClick={onClose} className="rounded-full bg-line/50 p-2 text-slate-300 transition hover:bg-line hover:text-white">
                 <X size={20} />
               </button>
@@ -58,7 +59,7 @@ export function AssistedImportModal({ isOpen, onClose, onSuccess }) {
 
             <div className="flex-1 overflow-y-auto p-5 [scrollbar-width:none]">
               <p className="mb-5 text-sm text-slate-400">
-                Preencha os dados consultados no seu Samsung Health ou Fitdays para enviá-los ao Check-in.
+                Preencha os dados consultados no {sourceLabel(source)} para enviá-los ao Check-in.
               </p>
 
               <form id="assisted-import-form" onSubmit={handleSubmit} className="space-y-4">
@@ -99,6 +100,18 @@ export function AssistedImportModal({ isOpen, onClose, onSuccess }) {
       )}
     </AnimatePresence>
   );
+}
+
+function modalTitle(source) {
+  if (source === 'samsung_health') return 'Importar do Samsung Health';
+  if (source === 'fitdays') return 'Importar do Fitdays';
+  return 'Importação Assistida';
+}
+
+function sourceLabel(source) {
+  if (source === 'samsung_health') return 'Samsung Health';
+  if (source === 'fitdays') return 'Fitdays';
+  return 'Samsung Health ou Fitdays';
 }
 
 function Field({ label, value, onChange, step }) {
