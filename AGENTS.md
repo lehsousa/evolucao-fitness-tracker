@@ -11,6 +11,7 @@ Este arquivo resume o estado atual do projeto para qualquer agente ou pessoa que
 - Coach IA usa Gemini sob demanda quando `VITE_GEMINI_API_KEY` está presente.
 - ExerciseDB usa RapidAPI quando `VITE_EXERCISEDB_API_KEY` está presente.
 - Health Connect possui bridge nativa Android via plugin Capacitor local; web/PWA continua com importação assistida.
+- Samsung Health Data SDK possui bridge nativa opcional para tentar ler bioimpedância diretamente do Samsung Health.
 - Dados do app continuam locais, via `localStorage`; não há backend.
 
 ## Variáveis de ambiente
@@ -123,16 +124,19 @@ Principais chaves atuais:
 Arquivos principais:
 
 - `android/app/src/main/java/br/com/leandro/evolucaofitness/HealthConnectPlugin.kt`
+- `android/app/src/main/java/br/com/leandro/evolucaofitness/SamsungHealthDataPlugin.kt`
 - `android/app/src/main/java/br/com/leandro/evolucaofitness/MainActivity.java`
 - `src/services/health/healthConnectNativeService.js`
+- `src/services/health/samsungHealthDataService.js`
 - `src/pages/Integrations.jsx`
 - `src/pages/Checkin.jsx`
 
 Configuração Android:
 
 - Dependência: `androidx.health.connect:connect-client:1.1.0-alpha12`
+- Dependência local opcional: `android/app/libs/samsung-health-data-api-1.1.0.aar`
 - Kotlin Android plugin adicionado ao app nativo.
-- `minSdkVersion = 26`, exigido pelo SDK atual do Health Connect.
+- `minSdkVersion = 29`, exigido pelo Samsung Health Data SDK.
 - Manifest inclui queries para `com.google.android.apps.healthdata` e `com.sec.android.app.shealth`.
 - Permissões de leitura adicionadas: steps, weight, body fat, BMR, heart rate, sleep, active calories e total calories.
 - Rationale configurado com `androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE` e alias `VIEW_PERMISSION_USAGE`.
@@ -140,9 +144,18 @@ Configuração Android:
 Fluxo:
 
 - Android/Capacitor: Check-in chama Health Connect, pede permissões e preenche campos retornados sem apagar valores existentes.
+- Se a origem do Check-in for `Samsung Health`, o app tenta usar `SamsungHealthDataPlugin` para bioimpedância antes da importação assistida.
 - Web/PWA: botão de importação abre a importação assistida manual.
 - Integrações mostra status real, permissões, importar dados de hoje e abrir configurações.
 - Não há integração Bluetooth direta, backend ou envio automático para Gemini.
+
+Notas do Samsung Health Data SDK:
+
+- O arquivo `.aar` é ignorado pelo Git por `android/.gitignore`; para compilar em outra máquina, recolocar `android/app/libs/samsung-health-data-api-1.1.0.aar`.
+- Pode exigir Developer Mode no Samsung Health para teste local.
+- Para distribuição pública, pode exigir aprovação/registro da Samsung com package name e assinatura.
+- Campos tentados: peso, gordura corporal, massa muscular/esquelética, água corporal, IMC e metabolismo basal.
+- Gordura visceral não apareceu como campo disponível no AAR usado e pode continuar manual.
 
 ## Funcionalidades implementadas
 

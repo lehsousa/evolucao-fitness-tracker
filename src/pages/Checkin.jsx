@@ -11,6 +11,14 @@ import {
   readTodayHealthData,
   requestHealthPermissions,
 } from '../services/health/healthConnectNativeService.js';
+import {
+  checkSamsungBodyCompositionPermission,
+  checkSamsungHealthAvailability,
+  hasSamsungBodyCompositionPermission,
+  isSamsungHealthNativeAvailable,
+  readLatestSamsungBodyComposition,
+  requestSamsungBodyCompositionPermission,
+} from '../services/health/samsungHealthDataService.js';
 
 const initialForm = {
   date: todayKey(),
@@ -103,6 +111,11 @@ export function Checkin({ onSave }) {
   async function handleImportHealthData() {
     setImportError('');
 
+    if (form.source === 'samsung_health') {
+      await importSamsungHealthBodyComposition();
+      return;
+    }
+
     if (shouldUseAssistedImport(form.source)) {
       setIsImportModalOpen(true);
       return;
@@ -145,6 +158,44 @@ export function Checkin({ onSave }) {
     }
   }
 
+  async function importSamsungHealthBodyComposition() {
+    if (!isSamsungHealthNativeAvailable()) {
+      setImportError('Leitura direta do Samsung Health funciona apenas no app Android. Use a importacao assistida neste ambiente.');
+      setIsImportModalOpen(true);
+      return;
+    }
+
+    setIsImportingHealth(true);
+    try {
+      const availability = await checkSamsungHealthAvailability();
+      if (!availability.available) {
+        setImportError(`${availability.message || 'Samsung Health Data SDK indisponivel.'} Se estiver testando localmente, confirme o Developer Mode do Samsung Health.`);
+        return;
+      }
+
+      let permissions = await checkSamsungBodyCompositionPermission();
+      if (!hasSamsungBodyCompositionPermission(permissions)) {
+        permissions = await requestSamsungBodyCompositionPermission();
+      }
+
+      if (!hasSamsungBodyCompositionPermission(permissions)) {
+        setImportError(permissions?.message || 'Permissao de bioimpedancia do Samsung Health pendente.');
+        return;
+      }
+
+      const result = await readLatestSamsungBodyComposition();
+      if (!result.ok || !result.data) {
+        setImportError(result.message || 'Samsung Health nao retornou bioimpedancia. Use a importacao assistida se os dados estiverem visiveis no app.');
+        return;
+      }
+
+      applySamsungHealthData(result.data);
+      showImportSuccess(buildSamsungImportMessage(result.data));
+    } finally {
+      setIsImportingHealth(false);
+    }
+  }
+
   function applyHealthConnectData(data) {
     setForm((current) => ({
       ...current,
@@ -159,6 +210,19 @@ export function Checkin({ onSave }) {
       avgHeartRate: valueOrCurrent(data.avgHeartRate, current.avgHeartRate),
       estimatedCalories: valueOrCurrent(data.estimatedCalories ?? data.totalCalories, current.estimatedCalories),
       source: 'health_connect',
+    }));
+  }
+
+  function applySamsungHealthData(data) {
+    setForm((current) => ({
+      ...current,
+      date: data.date || current.date,
+      weight: valueOrCurrent(data.weight, current.weight),
+      bodyFat: valueOrCurrent(data.bodyFat, current.bodyFat),
+      muscleMass: valueOrCurrent(data.muscleMass, current.muscleMass),
+      bodyWater: valueOrCurrent(data.bodyWater, current.bodyWater),
+      bmr: valueOrCurrent(data.bmr, current.bmr),
+      source: 'samsung_health',
     }));
   }
 
@@ -239,7 +303,7 @@ export function Checkin({ onSave }) {
             ))}
           </select>
           <p className="mt-2 text-xs font-semibold text-slate-500">
-            Health Connect importa automaticamente. Samsung Health e Fitdays usam importação assistida, porque o Android não libera leitura direta desses apps.
+            Health Connect importa atividade. Samsung Health tenta ler bioimpedancia direto pelo SDK nativo. Fitdays continua com importacao assistida.
           </p>
         </section>
 
@@ -299,7 +363,7 @@ function valueOrCurrent(value, current) {
 }
 
 function shouldUseAssistedImport(source) {
-  return source === 'samsung_health' || source === 'fitdays' || source === 'importacao_assistida';
+  return source === 'fitdays' || source === 'importacao_assistida';
 }
 
 function assistedSourceFor(source) {
@@ -307,7 +371,7 @@ function assistedSourceFor(source) {
 }
 
 function importButtonLabel(source) {
-  if (source === 'samsung_health') return 'Preencher dados do Samsung Health';
+  if (source === 'samsung_health') return 'Importar bioimpedancia Samsung';
   if (source === 'fitdays') return 'Preencher dados do Fitdays';
   if (source === 'importacao_assistida') return 'Abrir importação assistida';
   return 'Importar via Health Connect';
@@ -336,6 +400,20 @@ function buildHealthImportMessage(data) {
   return parts.join(' ');
 }
 
+function buildSamsungImportMessage(data) {
+  const imported = readableFieldList(data?.importedFields);
+  const parts = [];
+
+  if (imported) parts.push(`Importado do Samsung Health: ${imported}.`);
+  else parts.push('Samsung Health respondeu, mas nenhum campo de bioimpedancia veio preenchido.');
+
+  if (!data?.bodyFat) parts.push('Gordura corporal pode nao estar liberada pelo Samsung Health Data SDK neste aparelho.');
+  if (!data?.muscleMass) parts.push('Massa muscular pode depender do campo publicado pela balanca/Samsung Health.');
+  parts.push('Revise antes de salvar.');
+
+  return parts.join(' ');
+}
+
 function readableFieldList(fields) {
   if (!Array.isArray(fields) || !fields.length) return '';
   const labels = {
@@ -351,6 +429,9 @@ function readableFieldList(fields) {
     activeCalories: 'calorias ativas',
     totalCalories: 'calorias totais',
     estimatedCalories: 'calorias estimadas',
+    bodyWater: 'agua corporal',
+    bmi: 'IMC',
+    bodyFatMass: 'massa gorda',
   };
   return fields.map((field) => labels[field] || field).join(', ');
 }

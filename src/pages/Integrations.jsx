@@ -13,6 +13,13 @@ import {
   readTodayHealthData,
   requestHealthPermissions,
 } from '../services/health/healthConnectNativeService.js';
+import {
+  checkSamsungBodyCompositionPermission,
+  checkSamsungHealthAvailability,
+  hasSamsungBodyCompositionPermission,
+  readLatestSamsungBodyComposition,
+  requestSamsungBodyCompositionPermission,
+} from '../services/health/samsungHealthDataService.js';
 
 export function Integrations({ onNavigate }) {
   const [openModal, setOpenModal] = useState(null);
@@ -21,6 +28,11 @@ export function Integrations({ onNavigate }) {
   const [healthFeedback, setHealthFeedback] = useState('');
   const [healthDiagnostics, setHealthDiagnostics] = useState(null);
   const [isHealthLoading, setIsHealthLoading] = useState(false);
+  const [samsungStatus, setSamsungStatus] = useState({ status: 'unknown', message: 'Ainda nao verificado' });
+  const [samsungPermissions, setSamsungPermissions] = useState(null);
+  const [samsungFeedback, setSamsungFeedback] = useState('');
+  const [samsungBodyComposition, setSamsungBodyComposition] = useState(null);
+  const [isSamsungLoading, setIsSamsungLoading] = useState(false);
 
   useEffect(() => {
     verifyHealthConnect();
@@ -127,6 +139,70 @@ export function Integrations({ onNavigate }) {
       setHealthFeedback(`Diagnostico concluido: ${found} tipos de dados encontrados no Health Connect.`);
     } finally {
       setIsHealthLoading(false);
+    }
+  }
+
+  async function verifySamsungHealthData() {
+    setIsSamsungLoading(true);
+    setSamsungFeedback('');
+    try {
+      const availability = await checkSamsungHealthAvailability();
+      setSamsungStatus({
+        status: availability.available ? 'granted' : availability.status || 'error',
+        message: availability.message || (availability.available ? 'Samsung Health Data SDK disponivel' : 'Samsung Health Data SDK indisponivel'),
+      });
+
+      if (availability.available) {
+        const permissions = await checkSamsungBodyCompositionPermission();
+        setSamsungPermissions(permissions);
+      }
+    } finally {
+      setIsSamsungLoading(false);
+    }
+  }
+
+  async function askSamsungBodyCompositionPermission() {
+    setIsSamsungLoading(true);
+    setSamsungFeedback('');
+    try {
+      const permissions = await requestSamsungBodyCompositionPermission();
+      setSamsungPermissions(permissions);
+      setSamsungFeedback(permissions?.message || (hasSamsungBodyCompositionPermission(permissions) ? 'Permissao concedida.' : 'Permissao pendente.'));
+    } finally {
+      setIsSamsungLoading(false);
+    }
+  }
+
+  async function importSamsungBodyComposition() {
+    setIsSamsungLoading(true);
+    setSamsungFeedback('');
+    try {
+      let permissions = samsungPermissions || await checkSamsungBodyCompositionPermission();
+      if (!hasSamsungBodyCompositionPermission(permissions)) {
+        permissions = await requestSamsungBodyCompositionPermission();
+        setSamsungPermissions(permissions);
+      }
+
+      if (!hasSamsungBodyCompositionPermission(permissions)) {
+        setSamsungFeedback(permissions?.message || 'Permissao de bioimpedancia pendente.');
+        return;
+      }
+
+      const result = await readLatestSamsungBodyComposition();
+      if (!result.ok || !result.data) {
+        setSamsungFeedback(result.message || 'Nao foi possivel ler bioimpedancia do Samsung Health.');
+        return;
+      }
+
+      setSamsungBodyComposition(result.data);
+      window.localStorage.setItem('pendingHealthImport', JSON.stringify({
+        ...result.data,
+        source: 'samsung_health',
+      }));
+      setSamsungFeedback(`Bioimpedancia Samsung encontrada: ${buildSamsungBodyCompositionSummary(result.data)}. Abra o Check-in para revisar e salvar.`);
+      if (onNavigate) onNavigate('checkin');
+    } finally {
+      setIsSamsungLoading(false);
     }
   }
 
@@ -321,6 +397,63 @@ export function Integrations({ onNavigate }) {
         </article>
       </section>
 
+      <section className="card p-4 sm:p-5 border border-cyanFit/20">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="flex items-start gap-3">
+            <div className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-cyanFit/15 text-cyanFit">
+              <Smartphone size={22} />
+            </div>
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-xl font-black text-white">Samsung Health Data SDK</h2>
+                <span className={`rounded-lg border px-3 py-1 text-xs font-black uppercase tracking-wide ${statusClass(samsungStatus.status)}`}>
+                  {samsungStatus.message}
+                </span>
+              </div>
+              <p className="mt-2 text-sm text-slate-400">
+                Leitura nativa opcional para bioimpedancia publicada no Samsung Health. Pode exigir Developer Mode ou liberacao da Samsung para este app.
+              </p>
+            </div>
+          </div>
+          {samsungPermissions && (
+            <span className={`rounded-lg px-3 py-2 text-xs font-black ${hasSamsungBodyCompositionPermission(samsungPermissions) ? 'bg-mint/10 text-mint' : 'bg-amberFit/10 text-amberFit'}`}>
+              bioimpedancia: {hasSamsungBodyCompositionPermission(samsungPermissions) ? 'ok' : 'pendente'}
+            </span>
+          )}
+        </div>
+        <div className="mt-4 grid gap-2 sm:grid-cols-3">
+          <button type="button" onClick={verifySamsungHealthData} disabled={isSamsungLoading} className={healthButtonClass}>
+            <ShieldCheck size={18} /> Verificar Samsung SDK
+          </button>
+          <button type="button" onClick={askSamsungBodyCompositionPermission} disabled={isSamsungLoading} className={healthButtonClass}>
+            <Link2 size={18} /> Permitir bioimpedancia
+          </button>
+          <button type="button" onClick={importSamsungBodyComposition} disabled={isSamsungLoading} className={healthButtonClass}>
+            <Download size={18} /> Importar bioimpedancia
+          </button>
+        </div>
+        {samsungFeedback && (
+          <p className="mt-3 rounded-lg border border-amberFit/30 bg-amberFit/10 px-3 py-2 text-sm font-semibold text-amberFit">{samsungFeedback}</p>
+        )}
+        {samsungBodyComposition && (
+          <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              ['Peso', samsungBodyComposition.weight, 'kg'],
+              ['Gordura', samsungBodyComposition.bodyFat, '%'],
+              ['Massa muscular', samsungBodyComposition.muscleMass, 'kg'],
+              ['Agua corporal', samsungBodyComposition.bodyWater, 'kg'],
+              ['TMB', samsungBodyComposition.bmr, 'kcal'],
+              ['IMC', samsungBodyComposition.bmi, ''],
+            ].map(([label, value, unit]) => (
+              <div key={label} className="rounded-lg border border-line bg-ink p-3">
+                <p className="text-xs font-bold uppercase tracking-wide text-slate-500">{label}</p>
+                <p className="mt-1 text-lg font-black text-white">{value ?? '--'} {unit}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
       <section className="card p-4 sm:p-5">
         <div className="flex items-start gap-3">
           <div className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-cyanFit/15 text-cyanFit">
@@ -395,6 +528,16 @@ function buildHealthFeedback(data) {
   const missing = readableFieldList(data?.missingFields);
   if (!imported) return 'Health Connect respondeu, mas não publicou valores para hoje. Confira se Samsung Health/Fitdays estão compartilhando dados.';
   return `Importado: ${imported}. ${missing ? `Sem dados hoje para: ${missing}. ` : ''}${data?.bodyCompositionWindowDays ? `Composição corporal buscada nos últimos ${data.bodyCompositionWindowDays} dias. ` : ''}Abra o Check-in para revisar e salvar.`;
+}
+
+function buildSamsungBodyCompositionSummary(data) {
+  const items = [];
+  if (data?.weight) items.push(`peso ${data.weight} kg`);
+  if (data?.bodyFat) items.push(`gordura ${data.bodyFat}%`);
+  if (data?.muscleMass) items.push(`massa ${data.muscleMass} kg`);
+  if (data?.bodyWater) items.push(`agua ${data.bodyWater} kg`);
+  if (data?.bmr) items.push(`TMB ${data.bmr} kcal`);
+  return items.length ? items.join(', ') : 'registro encontrado sem campos compativeis';
 }
 
 function readableFieldList(fields) {

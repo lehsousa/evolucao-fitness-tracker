@@ -371,3 +371,61 @@ git diff
 ## Resumo executivo para continuidade
 
 A integracao Health Connect esta operacional e importa peso, passos, frequencia cardiaca e calorias estimadas. Os dados faltantes de bioimpedancia aparecem no Samsung Health/Fitdays, mas nao foram publicados ou nao ficaram acessiveis no Health Connect durante os testes. O proximo passo nao deve ser tentativa aleatoria de codigo; deve ser confirmar a camada de origem/publicacao dos registros e, se necessario, investigar Samsung Health Data SDK ou alternativas Fitdays/exportacao.
+
+## Atualizacao posterior - Samsung Health Data SDK
+
+Foi iniciado o caminho de leitura direta pelo Samsung Health Data SDK.
+
+Arquivos adicionados/alterados:
+
+- `android/app/src/main/java/br/com/leandro/evolucaofitness/SamsungHealthDataPlugin.kt`
+  - Plugin Capacitor local `SamsungHealthData`.
+  - Metodos expostos:
+    - `isAvailable`
+    - `checkPermissions`
+    - `requestPermissions`
+    - `readLatestBodyComposition`
+    - `readBodyCompositionHistory`
+  - Le `DataTypes.BODY_COMPOSITION` dos ultimos 365 dias.
+  - Campos mapeados: peso, altura, gordura corporal, massa gorda, massa livre de gordura, massa muscular/esqueletica, agua corporal, IMC e metabolismo basal.
+
+- `src/services/health/samsungHealthDataService.js`
+  - Wrapper JavaScript para o plugin nativo.
+  - Normaliza o ultimo registro para o formato do Check-in.
+
+- `src/pages/Checkin.jsx`
+  - Quando a origem e `samsung_health`, tenta importar bioimpedancia pelo Samsung Health Data SDK.
+  - Se falhar, a importacao assistida continua disponivel.
+
+- `src/pages/Integrations.jsx`
+  - Adiciona card de teste do Samsung Health Data SDK:
+    - verificar disponibilidade
+    - solicitar permissao de bioimpedancia
+    - importar bioimpedancia
+
+Configuracao Android:
+
+- Dependencia local em `android/app/build.gradle`:
+  - `implementation(name: 'samsung-health-data-api-1.1.0', ext: 'aar')`
+- O AAR esperado e:
+  - `android/app/libs/samsung-health-data-api-1.1.0.aar`
+- `minSdkVersion` foi ajustado para `29`, pois o Samsung Health Data SDK exige Android 10+.
+
+Observacoes importantes:
+
+- O AAR e ignorado pelo Git por `android/.gitignore` (`*.aar`). Em outra maquina, o arquivo precisa ser recolocado manualmente.
+- O acesso pode exigir Developer Mode no Samsung Health para teste local.
+- Para distribuicao publica, pode exigir registro/aprovacao da Samsung com package name e assinatura.
+- Gordura visceral nao apareceu como campo do `BODY_COMPOSITION` no AAR `1.1.0`; provavelmente continuara manual salvo se outro SDK/fonte expuser esse dado.
+
+Validacao local apos adicionar o SDK:
+
+```powershell
+npm run build
+$env:JAVA_HOME='C:\Program Files\Android\Android Studio\jbr'
+$env:Path="$env:JAVA_HOME\bin;$env:Path"
+cd android
+.\gradlew.bat assembleDebug
+```
+
+O build Android passou depois de ajustar `minSdkVersion` para 29.

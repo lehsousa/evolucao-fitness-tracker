@@ -263,8 +263,50 @@ Configuração nativa adicionada:
 - Plugin Capacitor local: `HealthConnectPlugin`
 - Serviço JS: `src/services/health/healthConnectNativeService.js`
 - Dependência Android: `androidx.health.connect:connect-client:1.1.0-alpha12`
-- `minSdkVersion`: 26, exigido pelo SDK atual do Health Connect
+- `minSdkVersion`: 29, exigido pela integracao opcional com Samsung Health Data SDK
 - Os dados importados ficam no `localStorage` junto ao check-in. Nada é enviado para backend ou para Gemini automaticamente.
+
+## Samsung Health Data SDK
+
+O app tambem possui uma ponte nativa opcional para o **Samsung Health Data SDK**, usada para tentar ler bioimpedancia diretamente do Samsung Health quando o Health Connect nao publica todos os campos.
+
+Arquivos principais:
+
+- Plugin Android: `android/app/src/main/java/br/com/leandro/evolucaofitness/SamsungHealthDataPlugin.kt`
+- Servico JS: `src/services/health/samsungHealthDataService.js`
+- Tela: `src/pages/Integrations.jsx`
+- Check-in: `src/pages/Checkin.jsx`
+
+O SDK e distribuido pela Samsung como AAR local. Por padrao, arquivos `*.aar` dentro de `android/` sao ignorados pelo Git. Para compilar esta integracao em uma maquina nova, coloque manualmente o arquivo abaixo:
+
+```text
+android/app/libs/samsung-health-data-api-1.1.0.aar
+```
+
+Depois rode:
+
+```bash
+npm run build
+npx cap sync android
+```
+
+Para Android:
+
+```powershell
+$env:JAVA_HOME='C:\Program Files\Android\Android Studio\jbr'
+$env:Path="$env:JAVA_HOME\bin;$env:Path"
+cd android
+.\gradlew.bat assembleDebug
+```
+
+Observacoes importantes:
+
+- Requer Android 10+ (`minSdkVersion = 29`).
+- Pode exigir Samsung Health em Developer Mode para teste local.
+- Para distribuicao publica, a Samsung pode exigir registro/aprovacao do app com package name e assinatura.
+- Campos tentados: peso, gordura corporal, massa muscular/esqueletica, agua corporal, IMC e metabolismo basal.
+- Gordura visceral nao apareceu como campo padronizado no AAR usado e pode continuar manual.
+- Se o Samsung SDK negar acesso, o app mantem Health Connect e importacao assistida.
 
 ## Transformação para Aplicativo Android (Capacitor)
 
